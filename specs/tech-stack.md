@@ -124,7 +124,41 @@ class Progress(models.Model):
     created_at = DateTimeField(auto_now_add=True)
 ```
 
-## Excluded Tools (deliberately)
+## API Contract
+
+### GraphQL Schema
+
+```graphql
+type Exercise {
+  id: ID!
+  sentence: String!
+  sentence_id: String
+  audio_url: String!
+  difficulty: Int!
+}
+
+type Query {
+  exercises: [Exercise!]!
+  exercise(id: ID!): Exercise
+}
+```
+
+### Client API
+
+| Action | Query / Mutation |
+|---|---|
+| Load next exercise | `{ exercises { id sentence audio_url difficulty } }` |
+| Record attempt | (client-side only for MVP, no backend write) |
+| Replay audio | `<audio src="{exercise.audio_url}">` |
+
+### Data flow
+
+1. `GET { exercises }` → returns 100 exercises from DB
+2. Frontend picks one → displays `sentence` in large text
+3. User presses play → HTML5 `<audio>` loads from `audio_url`
+4. User types via virtual keyboard → `typed` ref updates
+5. User presses Check → compares `typed` with `expected.sentence` client-side
+6. Result shown → on correct: picks next exercise automatically
 
 | Tool | Why not |
 |---|---|

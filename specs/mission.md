@@ -45,3 +45,38 @@ MVP is "done" when:
 - A user can open the app, click audio, type what they hear, and get feedback
 - The entire flow works with 100 exercises from the common_voice dataset
 - No login or configuration required
+
+## UI Design
+
+### Layout (single page, centered column)
+
+```
+┌──────────────────────────────┐
+│   [Sentence: สวัสดีวัน]       │    ← large text, sentence area
+│   [Length hint: ~15 chars]   │    ← muted gray
+│                              │
+│   ┌────────────────────┐     │    ← audio button
+│   │   ▶  Play audio    │     │
+│   └────────────────────┘     │
+│                              │
+│   [__________________]       │    ← typed input field
+│                              │
+│   ┌──────┐ ┌──────┐         │    ← Thai keyboard rows
+│   │ ข    │ ฃ     │         │
+│   │ ค    │ ฅ     │         │
+│   └──────┘ └──────┘         │
+│                              │
+│   [Check]  [Skip]  [Replay]  │ ← action buttons
+│                              │
+│   ✓ Correct! → auto advance  │    ← result feedback area
+│   or                         │
+│   ✗ Incorrect               │
+│     Expected: สวัสดีวัน     │
+│     Try again                │
+└──────────────────────────────┘
+```
+
+- Sentence area: white text, large font, centered
+- Keyboard: dark background, rounded keys, next expected key highlighted
+- Input field: under keyboard, reflects keys as they are pressed
+- Feedback: green text for correct, red for incorrect, reveals expected answer
