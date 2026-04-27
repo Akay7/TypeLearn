@@ -13,8 +13,8 @@ Create the repo structure, project scaffolds, and runtime configs. No code runs 
 | Init Django project | `django-admin startproject thai_learn` | [Django 5.x docs](https://docs.djangoproject.com/en/stable/intro/) |
 | Init Django app | `python manage.py startapp exercises` | [Django app docs](https://docs.djangoproject.com/en/stable/intro/tutorial01/) |
 | Init Poetry | `poetry init -n --name typelearn-backend` | [Poetry docs](https://python-poetry.org/docs/) |
-| Add Poetry deps | `poetry add django strawberry-graphql-django strawberry psycopg[binary] django-cors-headers gunicorn Pillow` | [Poetry add docs](https://python-poetry.org/docs/cli/#poetry-add) |
-| Init Vue frontend | `npm create vite@latest frontend -- --template vue` | [Vue + Vite docs](https://vuejs.org/guide/quick-start) or `npm create vue@latest` |
+| Add Poetry deps | `poetry add django strawberry-graphql-django strawberry psycopg[binary] django-cors-headers gunicorn Pillow pytest pytest-django` | [Poetry add docs](https://python-poetry.org/docs/cli/#poetry-add) |
+| Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue CLI docs](https://cli.vuejs.org/guide/cli-services.html) or `npm create vite@latest frontend -- --template vue` |
 | Add Vue deps | `npm install pinia` | [Vue docs](https://pinia.vuejs.org/) |
 | Init podman network | `podman network create typelearn-net` | [Podman docs](https://docs.podman.io/) |
 | Prepare podman-compose files | Create `podman-compose.yml` defining `db` service with `postgres:17` image, `typelearn-net` network, and persistent volume; add `db.env` with `POSTGRES_PASSWORD` and `POSTGRES_DB` | [podman-compose docs](https://github.com/containers/podman-compose) |

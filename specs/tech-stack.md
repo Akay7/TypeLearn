@@ -35,22 +35,23 @@
 
 | Layer | Choice | Version | Reason |
 |---|---|---|---|
-| Framework | Django | 5.x | Established, mature, large ecosystem |
-| API | Strawberry GraphQL | 0.46+ | Less boilerplate than DRF, auto introspection, type safe |
+| Framework | Django | latest | Established, mature, large ecosystem |
+| API | Strawberry GraphQL | latest | Less boilerplate than DRF, auto introspection, type safe |
 | Database | PostgreSQL | 17 (latest) | FK integrity, full-text search, ACID compliance |
-| DB driver | psycopg (binary) | 3.x | Native async, type hinting over psycopg2 |
+| DB driver | psycopg (binary) | latest | Native async, type hinting over psycopg2 |
 | Storage | Django FileField | — | Audio files stored on filesystem via `MEDIA_ROOT` |
-| Package manager | Poetry | 2.x | Lock files, dependency resolution, Django ecosystem fit |
-| WSGI server | Gunicorn | 21.x | Standard for Django production deployment |
+| Package manager | Poetry | latest | Lock files, dependency resolution, Django ecosystem fit |
+| WSGI server | Gunicorn | latest | Standard for Django production deployment |
+| Tests | pytest + pytest-django | latest | Python testing standard with Django integration |
 
 ## Frontend
 
 | Layer | Choice | Version | Reason |
 |---|---|---|---|
-| Framework | Vue | 3.x | Reactivity, options + composition API, smaller than Angular |
-| Build | Vite | 6.x | Fast HMR, modern, lighter than webpack |
-| State | Pinia | 2.x | Official Vue store, simpler than Vuex |
-| Routing | vue-router | 4.x | Official, well-integrated |
+| Framework | Vue | latest | Reactivity, options + composition API, smaller than Angular |
+| Build | Vite | latest | Fast HMR, modern, lighter than webpack |
+| State | Pinia | latest | Official Vue store, simpler than Vuex |
+| Routing | vue-router | latest | Official, well-integrated |
 | HTTP | graphql-tag / native fetch | — | GraphQL client or direct fetch for MVP |
 | Keyboard | Custom component | — | On-screen Thai characters, no external dependency |
 
@@ -134,5 +135,4 @@ class Progress(models.Model):
 | Docker / Kubernetes | Out of MVP scope | Adds deployment complexity before product validation |
 | Tailwind / CSS frameworks | MVP has no UI requirements; minimal custom CSS is fine |
 | Redux / Vuex | Chose Pinia as the official Vue state management library |
-| Jest / Pytest | Not in MVP scope; add after the core loop works |
 | Nginx / Caddy | No deployment until MVP product validation succeeds |
