@@ -3,26 +3,33 @@
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                         browser                          │
-│                                                         │
-│    Vue 3 + Pinia  →  Strawberry GraphQL client  →  API  │
-└─────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────┐
-│                      Django backend                       │
-│                                                         │
-│    Strawberry GraphQL schema  →  Django models  →  ORM   │
-└─────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────┐
-│                    PostgreSQL 9.3+                        │
-│                                                         │
-│    exercises    progress    audio_files    users (v2+)    │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                   browser                                    │
+│                                                                              │
+│          Vue 3 + Pinia → Strawberry GraphQL client → API                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                            |
+                                            ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                               Django backend                                 │
+│                                                                              │
+│          Strawberry GraphQL schema → Django models → ORM                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                            |
+                                            ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         Podman / podman-compose                              │
+│                                                                              │
+│          PostgreSQL 17: exercises | progress | audio_files | users (v2+)     │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Infrastructure
+
+| Layer | Choice | Version | Reason |
+|---|---|---|---|
+| Container runtime | Podman | Latest (recommended over Docker) | Rootless, daemonless, Docker-compatible CLI |
+| Compose | podman-compose | Latest | Docker Compose files run natively with Podman |
 
 ## Backend
 
@@ -30,7 +37,7 @@
 |---|---|---|---|
 | Framework | Django | 5.x | Established, mature, large ecosystem |
 | API | Strawberry GraphQL | 0.46+ | Less boilerplate than DRF, auto introspection, type safe |
-| Database | PostgreSQL | 9.3+ | FK integrity, full-text search, ACID compliance |
+| Database | PostgreSQL | 17 (latest) | FK integrity, full-text search, ACID compliance |
 | DB driver | psycopg (binary) | 3.x | Native async, type hinting over psycopg2 |
 | Storage | Django FileField | — | Audio files stored on filesystem via `MEDIA_ROOT` |
 | Package manager | Poetry | 2.x | Lock files, dependency resolution, Django ecosystem fit |
@@ -123,7 +130,8 @@ class Progress(models.Model):
 | Django REST Framework | Switched to Strawberry GraphQL — less boilerplate, type safety |
 | pip / pip-tools | Chose Poetry for dependency management |
 | psycopg2 | Outdated, chose psycopg3 for async support |
-| Docker / Kubernetes | Out of MVP scope; adds infrastructure before product validation |
+| Podman / podman-compose | In — for local development | Podman is the preferred runtime; no Docker needed |
+| Docker / Kubernetes | Out of MVP scope | Adds deployment complexity before product validation |
 | Tailwind / CSS frameworks | MVP has no UI requirements; minimal custom CSS is fine |
 | Redux / Vuex | Chose Pinia as the official Vue state management library |
 | Jest / Pytest | Not in MVP scope; add after the core loop works |

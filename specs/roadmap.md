@@ -1,21 +1,84 @@
 # Roadmap
 
-## Phase 1: MVP (current)
+## Phase 1: MVP — Milestones
 
-Build the core loop: listen → type → check → feedback.
+Each milestone delivers a testable unit. Start from the first, stop only after the last completes the core loop.
 
-| Item | Status | Notes |
+### M1: Skeleton
+
+Create the repo structure, project scaffolds, and runtime configs. No code runs yet.
+
+| Action | Command | Reference |
 |---|---|---|
-| Django backend with GraphQL | planned | Strawberry GraphQL, PostgreSQL |
-| Exercise data model with FK relationships | planned | `Exercise` model with `original_audio` FileField |
-| JSON corpus loader for MVP data | planned | Load from `processed/mvp_dataset.json` |
-| Vue app with Vite | planned | Vue 3, Pinia, no UI framework |
-| Sentence display component | planned | Shows Thai sentence, length hint |
-| Audio player component | planned | Play/stop with Web Audio API |
-| Virtual Thai keyboard | planned | On-screen with active key highlight |
-| Input and validation logic | planned | Compare typed text against expected |
-| Results feedback | planned | Correct/incorrect, show next exercise |
-| Load 100 MVP exercises from corpus | planned | Easy difficulty, verified sentences |
+| Init Django project | `django-admin startproject thai_learn` | [Django 5.x docs](https://docs.djangoproject.com/en/stable/intro/) |
+| Init Django app | `python manage.py startapp exercises` | [Django app docs](https://docs.djangoproject.com/en/stable/intro/tutorial01/) |
+| Init Poetry | `poetry init -n --name typelearn-backend` | [Poetry docs](https://python-poetry.org/docs/) |
+| Add Poetry deps | `poetry add django strawberry-graphql-django strawberry psycopg[binary] django-cors-headers gunicorn Pillow` | [Poetry add docs](https://python-poetry.org/docs/cli/#poetry-add) |
+| Init Vue frontend | `npm create vite@latest frontend -- --template vue` | [Vue + Vite docs](https://vuejs.org/guide/quick-start) or `npm create vue@latest` |
+| Add Vue deps | `npm install pinia` | [Vue docs](https://pinia.vuejs.org/) |
+| Init podman network | `podman network create typelearn-net` | [Podman docs](https://docs.podman.io/) |
+| Prepare podman-compose files | Create `podman-compose.yml` defining `db` service with `postgres:17` image, `typelearn-net` network, and persistent volume; add `db.env` with `POSTGRES_PASSWORD` and `POSTGRES_DB` | [podman-compose docs](https://github.com/containers/podman-compose) |
+| Create `.gitignore` | Exclude `data/`, `__pycache__`, `.venv/` | |
+
+### M2: GraphQL query
+
+One query that returns all 100 exercises with audio URLs.
+
+- [ ] `schema.py` — `@strawberry.type` query `exercises` returning `ExerciseNode`
+- [ ] Endpoint `/graphql/` serving introspection
+- [ ] Query `{ exercises { sentence up_votes } }` returns JSON
+
+### M3: Frontend skeleton + sentence display
+
+Vue app mounts, fetches one exercise, displays its sentence.
+
+- [ ] Vue app mounts at `/` with no error
+- [ ] Component `SentenceView` fetches `{ exercises(limit: 1) }`
+- [ ] Renders Thai sentence in large text
+- [ ] Renders length hint below it
+
+### M4: Audio playback
+
+Click a button → play the downloaded MP3.
+
+- [ ] Component `AudioPlayer` mounted beneath sentence display
+- [ ] Button triggers `<audio>` element playback
+- [ ] Audio URL comes from GraphQL `audio_url` field
+
+### M5: Thai keyboard + input
+
+Type text on the virtual keyboard, see it appear in an input field.
+
+- [ ] Component `ThaiKeyboard` renders rows of Thai consonants/vowels/symbols
+- [ ] Clicking a key appends the character to a local `typed` ref
+- [ ] Active (next expected) key is highlighted visually
+- [ ] Input field reflects `typed` value in real time
+
+### M6: Validation
+
+Compare typed text against the target exercise sentence and show result.
+
+- [ ] On pressing "Check" (or Enter), compare `typed` with `exercise.sentence`
+- [ ] Show green "Correct" or red "Incorrect — try again"
+- [ ] On correct: auto-load the next exercise
+- [ ] On incorrect: reveal the correct answer and let the user continue
+
+### M7: Exercise model + DB
+
+Only now: persist data for exercises and progress.
+
+- [ ] `Exercise` model with FK relationships for `original_audio` (FileField)
+- [ ] `Progress` model — `exercise` (FK), `typed_text`, `is_correct`, `attempts`
+- [ ] Migration created and applied
+- [ ] All 100 MVP exercises in DB so the API query in M3 can return real data
+
+---
+
+### Core loop is complete at the end of M6:
+
+See sentence → hear audio → type → check → feedback → next exercise.
+
+That is the entire MVP.
 
 ## Phase 2: Expanded Practice
 
@@ -67,5 +130,7 @@ Add features and scale.
 | 2026-04-21 | Use Django + Strawberry GraphQL over DRF | Less boilerplate, type safety, auto-GraphQL introspection |
 | 2026-04-21 | Use Poetry over pip/pipenv/uv | Already installed, mature Django ecosystem support |
 | 2026-04-21 | Use PostgreSQL with psycopg (binary) | ACID compliance, full-text search, FK integrity |
-| 2026-04-21 | MVP has no Docker/k8s | Out of scope; adds deployment complexity |
+| 2026-04-21 | MVP has no Docker/k8s | Out of scope; use Podman for local dev instead |
+| 2026-04-21 | PostgreSQL 17 (latest) | Latest stable version |
+| 2026-04-21 | Podman for local development | Rootless, docker-compatible, recommended |
 | 2026-04-21 | App name: TypeLearn (generic) | Multi-language future; avoid hardcoding "Thai" |
