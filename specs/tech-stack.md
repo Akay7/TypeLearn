@@ -67,8 +67,22 @@
 
 ## Project Structure
 
+`TypeLearn/` (this repo — specs + scaffolding only, code generated with CLI commands from roadmap M1)
+
 ```
-ThaiLanguage/
+TypeLearn/
+├── specs/                         # Spec files (this directory)
+│   ├── mission.md
+│   ├── roadmap.md
+│   └── tech-stack.md
+├── .gitignore                     # data/, __pycache__, .venv/, etc.
+└── README.md                      # Clone this, run M1 commands, you have a running app
+```
+
+After running M1 commands, the code tree becomes:
+
+```
+TypeLearn/
 ├── specs/                         # Spec files (this directory)
 │   ├── mission.md
 │   ├── roadmap.md
@@ -92,10 +106,11 @@ ThaiLanguage/
 │           ├── main.js
 │           ├── App.vue
 │           └── components/
-├── data/                          # Large files, not committed
+├── podman-compose.yml             # PostgreSQL service
+├── db.env                         # POSTGRES_PASSWORD, POSTGRES_DB
+├── data/                          # Large files, .gitignore'd
 │   ├── cv-corpus-*/
-│   ├── processed/
-│   └── *.tar.gz
+│   └── processed/
 └── .gitignore
 ```
 
