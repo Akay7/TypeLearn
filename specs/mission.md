@@ -48,35 +48,48 @@ MVP is "done" when:
 
 ## UI Design
 
+Tailwind utility classes only — no custom CSS needed. Clean spacing with standard spacing scale (`p-6`, `mb-2`, `gap-4`).
+
 ### Layout (single page, centered column)
 
 ```
-┌──────────────────────────────┐
-│   [Sentence: สวัสดีวัน]       │    ← large text, sentence area
-│   [Length hint: ~15 chars]   │    ← muted gray
-│                              │
-│   ┌────────────────────┐     │    ← audio button
-│   │   ▶  Play audio    │     │
-│   └────────────────────┘     │
-│                              │
-│   [__________________]       │    ← typed input field
-│                              │
-│   ┌──────┐ ┌──────┐         │    ← Thai keyboard rows
-│   │ ข    │ ฃ     │         │
-│   │ ค    │ ฅ     │         │
-│   └──────┘ └──────┘         │
-│                              │
-│   [Check]  [Skip]  [Replay]  │ ← action buttons
-│                              │
-│   ✓ Correct! → auto advance  │    ← result feedback area
-│   or                         │
-│   ✗ Incorrect               │
-│     Expected: สวัสดีวัน     │
-│     Try again                │
-└──────────────────────────────┘
+┌───────  max-w-lg mx-auto  ────────┐
+│                                     │
+│   text-4xl font-bold text-center   │
+│   [Sentence: สวัสดีวัน]             │
+│                                     │
+│   text-sm text-gray-400 text-center │
+│   [Length hint: ~15 chars]         │
+│                                     │
+│   bg-blue-600 hover:bg-blue-700     │
+│  text-white px-4 py-2 rounded       │
+│   [ ▶ Play audio ]                  │
+│                                     │
+│   border border-gray-300 rounded    │
+│   p-3 text-lg bg-white             │
+│   [ _____________________ ]         │
+│                                     │
+│   bg-white/10 rounded-lg            │
+│   p-4                               │
+│   [ keyboard rows of keys ]         │
+│                                     │
+│   bg-green-600 text-white           │
+│   bg-red-600 text-white             │
+│   bg-gray-600 text-white            │
+│   [Check]  [Skip]  [Replay]         │
+│                                     │
+│   ✓ Correct → auto advance (green)  │
+│   ✗ Incorrect (red)                 │
+│     Expected: สวัสดีวัน              │
+│     Try again                       │
+└─────────────────────────────────────┘
 ```
 
-- Sentence area: white text, large font, centered
-- Keyboard: dark background, rounded keys, next expected key highlighted
-- Input field: under keyboard, reflects keys as they are pressed
-- Feedback: green text for correct, red for incorrect, reveals expected answer
+- Background: `bg-gradient-to-br from-gray-900 to-gray-800` (dark) or `from-indigo-50 to-purple-50` (light)
+- Content card: `bg-white/5 backdrop-blur rounded-2xl p-8 shadow-xl`
+- Sentence: `text-4xl font-bold text-white tracking-wide leading-relaxed`
+- Keyboard: `bg-white/10 backdrop-blur rounded-xl p-4`
+- Keys: `bg-white/10 hover:bg-white/20 active:bg-white/30 rounded-lg px-4 py-2 text-lg font-mono transition-colors`
+- Active key (next): `ring-2 ring-white bg-white/20`
+- Input: `bg-white/10 border-white/20 text-white placeholder-white/40 text-lg p-4 rounded-lg font-mono`
+- Feedback: `font-semibold text-lg` — green (`text-green-400`) or red (`text-red-400`)

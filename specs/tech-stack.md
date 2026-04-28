@@ -54,6 +54,7 @@
 | Routing | vue-router | latest | Official, well-integrated |
 | HTTP | graphql-tag / native fetch | — | GraphQL client or direct fetch for MVP |
 | Keyboard | Custom component | — | On-screen Thai characters, no external dependency |
+| Styling | Tailwind CSS | latest | Utility-first, fast iteration, clean default output |
 
 ## Data Layer
 
@@ -182,6 +183,5 @@ type Query {
 | psycopg2 | Outdated, chose psycopg3 for async support |
 | Podman / podman-compose | In — for local development | Podman is the preferred runtime; no Docker needed |
 | Docker / Kubernetes | Out of MVP scope | Adds deployment complexity before product validation |
-| Tailwind / CSS frameworks | MVP has no UI requirements; minimal custom CSS is fine |
 | Redux / Vuex | Chose Pinia as the official Vue state management library |
 | Nginx / Caddy | No deployment until MVP product validation succeeds |

@@ -15,7 +15,8 @@ Create the repo structure, project scaffolds, and runtime configs. No code runs 
 | Init Poetry | `poetry init -n --name typelearn-backend` | [Poetry docs](https://python-poetry.org/docs/) |
 | Add Poetry deps | `poetry add django strawberry-graphql-django strawberry psycopg[binary] django-cors-headers gunicorn Pillow pytest pytest-django` | [Poetry add docs](https://python-poetry.org/docs/cli/#poetry-add) |
 | Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue CLI docs](https://cli.vuejs.org/guide/cli-services.html) or `npm create vite@latest frontend -- --template vue` |
-| Add Vue deps | `npm install pinia` | [Vue docs](https://pinia.vuejs.org/) |
+| Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue CLI docs](https://cli.vuejs.org/guide/cli-services.html) or `npm create vite@latest frontend -- --template vue` |
+| Add Vue deps | `npm install pinia`, `npm install -D tailwindcss postcss autoprefixer`, `npx tailwindcss init -p` | [Tailwind CSS Vue guide](https://tailwindcss.com/docs/guides/vue3) |
 | Init podman network | `podman network create typelearn-net` | [Podman docs](https://docs.podman.io/) |
 | Prepare podman-compose files | Create `podman-compose.yml` defining `db` service with `postgres:17` image, `typelearn-net` network, and persistent volume; add `db.env` with `POSTGRES_PASSWORD` and `POSTGRES_DB` | [podman-compose docs](https://github.com/containers/podman-compose) |
 | Create `.gitignore` | Exclude `data/`, `__pycache__`, `.venv/` | |
