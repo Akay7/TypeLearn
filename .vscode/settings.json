@@ -1,0 +1,18 @@
+{
+  // Tests run from the Testing view, so there is no pytest entry in launch.json:
+  // the view's "Debug Test" already attaches the debugger to a single test.
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  // pytest's config lives in src/backend/pyproject.toml, so discovery has to
+  // start there rather than at the repo root.
+  "python.testing.cwd": "${workspaceFolder}/src/backend",
+  "python.testing.pytestArgs": [],
+  // The suite talks to PostgreSQL, so the test runner needs the same POSTGRES_*
+  // variables the container reads. Without this the Testing view collects the
+  // tests and then fails every one of them on connect.
+  "python.envFile": "${workspaceFolder}/db.env",
+  // Only a default: it applies until an interpreter is picked explicitly, and
+  // `uv sync` puts one here. A Poetry env is chosen with "Python: Select
+  // Interpreter" instead.
+  "python.defaultInterpreterPath": "${workspaceFolder}/src/backend/.venv/bin/python"
+}

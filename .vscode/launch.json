@@ -1,0 +1,73 @@
+{
+  // Requires: the database container running (`podman-compose up -d`), a Python
+  // interpreter selected for the backend (`uv sync` puts one at src/backend/.venv,
+  // which VS Code finds on its own; a Poetry env needs picking with
+  // "Python: Select Interpreter"), and `npm install` run in src/frontend.
+  //
+  // "App: backend + frontend" is the one to press F5 on: it starts Django, starts
+  // Vite, and opens a debuggable browser once Vite prints its URL.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: Django server",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/backend/manage.py",
+      "args": ["runserver"],
+      "cwd": "${workspaceFolder}/src/backend",
+      // POSTGRES_* live in db.env, the same file the container reads.
+      "envFile": "${workspaceFolder}/db.env",
+      "django": true,
+      "justMyCode": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Backend: load corpus",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/backend/manage.py",
+      // Ingestion takes the release directory as an argument — it is never
+      // hardcoded, so the prompt asks for it each run.
+      "args": ["load_corpus", "${input:corpusPath}"],
+      "cwd": "${workspaceFolder}/src/backend",
+      "envFile": "${workspaceFolder}/db.env",
+      "django": true,
+      "justMyCode": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Frontend: Vite dev server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/src/frontend",
+      // NO_COLOR is what makes the pattern below work: with colors on, Vite
+      // wraps the URL in escape codes ("http://localhost:" then a bolded port),
+      // so no regex matches it as one contiguous string and the browser never
+      // opens. Plain output costs colors in this one terminal.
+      "env": { "NO_COLOR": "1" },
+      // Vite prints "Local:   http://localhost:5173/" when it is ready; that
+      // line is what opens the browser, so nothing races the server startup.
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome",
+        "webRoot": "${workspaceFolder}/src/frontend"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "App: backend + frontend",
+      "configurations": ["Backend: Django server", "Frontend: Vite dev server"],
+      "stopAll": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "corpusPath",
+      "type": "promptString",
+      "description": "Path to the Common Voice release directory (e.g. .../cv-corpus-25.0-2026-03-09)"
+    }
+  ]
+}
