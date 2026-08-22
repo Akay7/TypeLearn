@@ -26,6 +26,18 @@ dev = [
     "pytest-django (>=4.14.0,<5.0.0)"
 ]
 
+# This is a Django application, not a distributable library: there is no
+# `typelearn_backend` module to install, so neither tool should try. Without
+# these, both fail with "No file/folder found for package typelearn-backend" --
+# uv when it asks the build backend for an editable install, Poetry when it
+# installs the root project at the end of `poetry install`.
+
+[tool.uv]
+package = false
+
+[tool.poetry]
+package-mode = false
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "typelearn.settings"
 python_files = ["test_*.py", "*_test.py"]
