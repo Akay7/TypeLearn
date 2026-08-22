@@ -7,7 +7,7 @@
 
 Each milestone delivers a testable unit. Start from the first, stop only after the last completes the core loop.
 
-### M1: Skeleton
+### M1: Skeleton — done
 
 Create the repo structure, project scaffolds, and runtime configs. No code runs yet.
 
@@ -27,24 +27,24 @@ Create the repo structure, project scaffolds, and runtime configs. No code runs 
 The Django project is named `typelearn`, not `thai_learn` — the app is designed for
 any language and Thai is only the first dataset.
 
-### M2: Exercise model + DB + data load
+### M2: Exercise model + DB + data load — done
 
 The data comes first: every later milestone queries it. (This was M7 in the original
 plan, which put the GraphQL query five milestones ahead of the model it reads.)
 
-- [ ] `Exercise` model — `sentence` (`CharField(max_length=255, unique=True)`),
+- [x] `Exercise` model — `sentence` (`CharField(max_length=255, unique=True)`),
       `sentence_id`, `original_audio` (FileField), `up_votes`, `difficulty`, `created_at`
-- [ ] `Progress` model — `exercise` (FK), `typed_text` (`CharField(max_length=255)`),
+- [x] `Progress` model — `exercise` (FK), `typed_text` (`CharField(max_length=255)`),
       `is_correct`, `attempts`, `created_at`
-- [ ] `python manage.py check` passes with no `fields.E120` error
-- [ ] Migration created and applied against the Podman PostgreSQL container
-- [ ] Ingestion script reads `validated.tsv` from the corpus path (a parameter, not a
+- [x] `python manage.py check` passes with no `fields.E120` error
+- [x] Migration created and applied against the Podman PostgreSQL container
+- [x] Ingestion script reads `validated.tsv` from the corpus path (a parameter, not a
       constant) and selects 100 exercises: `up_votes >= 2`, `down_votes == 0`,
       sentence 10–25 chars, clip ≤ 6000 ms, clip file present, one per distinct sentence
-- [ ] `difficulty` derived from sentence length and clip duration, 1–5
-- [ ] The 100 referenced `.mp3` clips copied into `MEDIA_ROOT`
-- [ ] Re-running ingestion does not duplicate rows or raise a uniqueness error
-- [ ] 100 `Exercise` rows in the DB, each with playable audio on disk
+- [x] `difficulty` derived from sentence length and clip duration, 1–5
+- [x] The 100 referenced `.mp3` clips copied into `MEDIA_ROOT`
+- [x] Re-running ingestion does not duplicate rows or raise a uniqueness error
+- [x] 100 `Exercise` rows in the DB, each with playable audio on disk
 
 ### M3: GraphQL query
 
@@ -166,3 +166,4 @@ Add features and scale.
 | 2026-08-21 | Podman stays in for local development | Confirmed after a draft edit marked it out of scope; keeps local dev on the documented PostgreSQL 17 target instead of diverging onto SQLite |
 | 2026-08-22 | Repository renamed ToneType → TypeLearn | The app was named TypeLearn in every document and code-level name; only the folder and GitHub repo still said ToneType |
 | 2026-08-21 | `openspec/specs/` is normative; `specs/` is background | Requirements get a testable home; mission narrative and decision log stay readable prose |
+| 2026-08-22 | Corpus selection is a deterministic sort, not a seeded sample | The spec asked for "the same seed" without defining one, so two runs with different seeds could both comply while producing different datasets; ordering by up_votes desc, duration asc, sentence_id asc makes the 100 exercises a pure function of the corpus |
