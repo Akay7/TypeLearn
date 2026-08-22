@@ -1,11 +1,17 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import { onMounted } from 'vue'
+
+import SentenceView from './components/SentenceView.vue'
+import { useExerciseStore } from './stores/exercise'
+
+const store = useExerciseStore()
+
+onMounted(() => store.load())
 </script>
 
 <template>
-  <!-- Tailwind utilities are live; M4 replaces this starter page with the exercise view. -->
-  <p class="rounded-lg bg-indigo-600 p-4 text-center text-lg font-bold text-white">
-    TypeLearn
-  </p>
-  <HelloWorld />
+  <main class="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-10 px-6">
+    <h1 class="text-sm font-medium tracking-[0.3em] uppercase opacity-60">TypeLearn</h1>
+    <SentenceView />
+  </main>
 </template>

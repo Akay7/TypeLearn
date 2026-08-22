@@ -50,31 +50,31 @@ plan, which put the GraphQL query five milestones ahead of the model it reads.)
 
 One query that returns the 100 exercises from M2 with audio URLs.
 
-- [ ] `schema.py` — `@strawberry.type` query `exercises` returning `ExerciseNode`
-- [ ] Endpoint `/graphql/` serving introspection
-- [ ] Query `{ exercises { sentence upVotes } }` returns JSON
+- [x] `schema.py` — `@strawberry_django.type(Exercise)` query `exercises` returning `Exercise`
+- [x] Endpoint `/graphql/` serving introspection
+- [x] Query `{ exercises { sentence upVotes } }` returns JSON
       (camelCase — Strawberry's `auto_camel_case` is on by default and not disabled here)
-- [ ] `exercises(limit: Int)` argument works, so the frontend can fetch one
-- [ ] `audioUrl` resolves to a URL an `<audio>` element can load
-- [ ] CORS configured so the Vite dev origin can query the endpoint
+- [x] `exercises(limit: Int)` argument works, so the frontend can fetch one
+- [x] `audioUrl` resolves to an absolute URL an `<audio>` element can load cross-origin
+- [x] CORS configured so the Vite dev origin can query the endpoint
 
 ### M4: Frontend skeleton + sentence display
 
 Vue app mounts, fetches one exercise, displays its sentence.
 
-- [ ] Vue app mounts at `/` with no error
-- [ ] Component `SentenceView` fetches `{ exercises(limit: 1) }`
-- [ ] Renders Thai sentence in large text
-- [ ] Renders length hint below it
+- [x] Vue app mounts at `/` with no error
+- [x] Component `SentenceView` fetches `{ exercises(limit: 1) }`
+- [x] Renders Thai sentence in large text
+- [x] Renders length hint below it
 
 ### M5: Audio playback
 
 Click a button → play the clip served from `MEDIA_ROOT`.
 
-- [ ] Component `AudioPlayer` mounted beneath sentence display
-- [ ] Button triggers `<audio>` element playback
-- [ ] Audio URL comes from GraphQL `audioUrl` field
-- [ ] Replay restarts playback from the beginning
+- [x] Component `AudioPlayer` mounted beneath sentence display
+- [x] Button triggers `<audio>` element playback
+- [x] Audio URL comes from GraphQL `audioUrl` field
+- [x] Replay restarts playback from the beginning
 
 ### M6: Thai keyboard + input
 

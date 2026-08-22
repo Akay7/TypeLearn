@@ -8,9 +8,20 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
+from strawberry.django.views import GraphQLView
+
+from exercises.schema import schema
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # csrf_exempt: the schema is read-only and unauthenticated, so the frontend
+    # can POST from the Vite origin without first fetching a CSRF cookie. This
+    # must be revisited before the first mutation is added.
+    path('graphql/', csrf_exempt(GraphQLView.as_view(
+        schema=schema,
+        graphql_ide='graphiql' if settings.DEBUG else None,
+    ))),
 ]
 
 # In development the runserver serves the ingested audio clips itself, so an

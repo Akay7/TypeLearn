@@ -58,6 +58,21 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'typelearn.urls'
 
+
+# Cross-origin requests
+# The Vite dev server is a different origin than Django, so the frontend's
+# GraphQL POST is a CORS request. Both spellings of the loopback host are
+# allowed because CORS matches the origin string literally.
+
+CORS_ALLOWED_ORIGINS = [
+    origin
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173',
+    ).split(',')
+    if origin
+]
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -144,3 +159,14 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# GraphQL query limits
+# Guards against oversized, alias-bombed, or deeply nested documents. Read from
+# the environment so a deployment can tighten or loosen them without a code
+# change. GraphiQL's introspection query fits inside the token default, and the
+# depth limiter ignores introspection fields, so development is unaffected.
+
+STRAWBERRY_MAX_TOKENS = int(os.environ.get('STRAWBERRY_MAX_TOKENS', 1000))
+STRAWBERRY_MAX_ALIASES = int(os.environ.get('STRAWBERRY_MAX_ALIASES', 10))
+STRAWBERRY_MAX_QUERY_DEPTH = int(os.environ.get('STRAWBERRY_MAX_QUERY_DEPTH', 10))
