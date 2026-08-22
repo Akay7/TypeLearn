@@ -1,0 +1,32 @@
+# Downloaded corpus, generated datasets, and copied media
+data/
+
+# Credentials
+db.env
+*.env
+!*.example.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Django
+*.sqlite3
+/src/backend/media/
+/src/backend/staticfiles/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editors and OS
+.DS_Store
+*.swp

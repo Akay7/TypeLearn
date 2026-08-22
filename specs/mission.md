@@ -1,5 +1,8 @@
 # Mission: TypeLearn
 
+> **Background document.** `openspec/specs/` is normative for required behavior.
+> This file records the product vision, target users, and UI direction.
+
 ## What
 
 A language learning application where users learn by typing what they hear.
@@ -35,6 +38,8 @@ over 150 languages. This app turns that raw data into structured practice.
 ### Cannot build yet
 - User accounts or progress saving
 - Docker files or deployment infrastructure
+  (Podman + `podman-compose.yml` for the local PostgreSQL container *is* in scope —
+  it is local development, not deployment)
 - Ratings or user feedback systems
 - Multi-language switching
 - Mobile responsive design

@@ -1,5 +1,8 @@
 # Roadmap
 
+> **Background document.** `openspec/specs/` is normative for required behavior.
+> This file records milestone sequencing and the decision log.
+
 ## Phase 1: MVP — Milestones
 
 Each milestone delivers a testable unit. Start from the first, stop only after the last completes the core loop.
@@ -10,26 +13,52 @@ Create the repo structure, project scaffolds, and runtime configs. No code runs 
 
 | Action | Command | Reference |
 |---|---|---|
-| Init Django project | `django-admin startproject thai_learn` | [Django 5.x docs](https://docs.djangoproject.com/en/stable/intro/) |
+| Init Django project | `django-admin startproject typelearn` | [Django 5.x docs](https://docs.djangoproject.com/en/stable/intro/) |
 | Init Django app | `python manage.py startapp exercises` | [Django app docs](https://docs.djangoproject.com/en/stable/intro/tutorial01/) |
 | Init Poetry | `poetry init -n --name typelearn-backend` | [Poetry docs](https://python-poetry.org/docs/) |
 | Add Poetry deps | `poetry add django strawberry-graphql-django strawberry psycopg[binary] django-cors-headers gunicorn Pillow pytest pytest-django` | [Poetry add docs](https://python-poetry.org/docs/cli/#poetry-add) |
-| Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue CLI docs](https://cli.vuejs.org/guide/cli-services.html) or `npm create vite@latest frontend -- --template vue` |
-| Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue CLI docs](https://cli.vuejs.org/guide/cli-services.html) or `npm create vite@latest frontend -- --template vue` |
-| Add Vue deps | `npm install pinia`, `npm install -D tailwindcss postcss autoprefixer`, `npx tailwindcss init -p` | [Tailwind CSS Vue guide](https://tailwindcss.com/docs/guides/vue3) |
+| Init Vue frontend | `npm create vue@latest frontend -- --default` | [Vue docs](https://vuejs.org/guide/quick-start.html) or `npm create vite@latest frontend -- --template vue` |
+| Add Vue deps | `npm install pinia`, `npm install -D tailwindcss @tailwindcss/vite` | [Tailwind CSS Vite guide](https://tailwindcss.com/docs/installation/using-vite) |
+| Wire Tailwind | Add `tailwindcss()` to `plugins` in `vite.config.js`, then `@import "tailwindcss";` in the main stylesheet | Tailwind 4 has no `init` command and needs no `tailwind.config.js` or PostCSS/autoprefixer setup |
 | Init podman network | `podman network create typelearn-net` | [Podman docs](https://docs.podman.io/) |
 | Prepare podman-compose files | Create `podman-compose.yml` defining `db` service with `postgres:17` image, `typelearn-net` network, and persistent volume; add `db.env` with `POSTGRES_PASSWORD` and `POSTGRES_DB` | [podman-compose docs](https://github.com/containers/podman-compose) |
-| Create `.gitignore` | Exclude `data/`, `__pycache__`, `.venv/` | |
+| Create `.gitignore` | Exclude `data/`, `__pycache__`, `.venv/`, `db.env`, `node_modules/` | |
 
-### M2: GraphQL query
+The Django project is named `typelearn`, not `thai_learn` — the app is designed for
+any language and Thai is only the first dataset.
 
-One query that returns all 100 exercises with audio URLs.
+### M2: Exercise model + DB + data load
+
+The data comes first: every later milestone queries it. (This was M7 in the original
+plan, which put the GraphQL query five milestones ahead of the model it reads.)
+
+- [ ] `Exercise` model — `sentence` (`CharField(max_length=255, unique=True)`),
+      `sentence_id`, `original_audio` (FileField), `up_votes`, `difficulty`, `created_at`
+- [ ] `Progress` model — `exercise` (FK), `typed_text` (`CharField(max_length=255)`),
+      `is_correct`, `attempts`, `created_at`
+- [ ] `python manage.py check` passes with no `fields.E120` error
+- [ ] Migration created and applied against the Podman PostgreSQL container
+- [ ] Ingestion script reads `validated.tsv` from the corpus path (a parameter, not a
+      constant) and selects 100 exercises: `up_votes >= 2`, `down_votes == 0`,
+      sentence 10–25 chars, clip ≤ 6000 ms, clip file present, one per distinct sentence
+- [ ] `difficulty` derived from sentence length and clip duration, 1–5
+- [ ] The 100 referenced `.mp3` clips copied into `MEDIA_ROOT`
+- [ ] Re-running ingestion does not duplicate rows or raise a uniqueness error
+- [ ] 100 `Exercise` rows in the DB, each with playable audio on disk
+
+### M3: GraphQL query
+
+One query that returns the 100 exercises from M2 with audio URLs.
 
 - [ ] `schema.py` — `@strawberry.type` query `exercises` returning `ExerciseNode`
 - [ ] Endpoint `/graphql/` serving introspection
-- [ ] Query `{ exercises { sentence up_votes } }` returns JSON
+- [ ] Query `{ exercises { sentence upVotes } }` returns JSON
+      (camelCase — Strawberry's `auto_camel_case` is on by default and not disabled here)
+- [ ] `exercises(limit: Int)` argument works, so the frontend can fetch one
+- [ ] `audioUrl` resolves to a URL an `<audio>` element can load
+- [ ] CORS configured so the Vite dev origin can query the endpoint
 
-### M3: Frontend skeleton + sentence display
+### M4: Frontend skeleton + sentence display
 
 Vue app mounts, fetches one exercise, displays its sentence.
 
@@ -38,15 +67,16 @@ Vue app mounts, fetches one exercise, displays its sentence.
 - [ ] Renders Thai sentence in large text
 - [ ] Renders length hint below it
 
-### M4: Audio playback
+### M5: Audio playback
 
-Click a button → play the downloaded MP3.
+Click a button → play the clip served from `MEDIA_ROOT`.
 
 - [ ] Component `AudioPlayer` mounted beneath sentence display
 - [ ] Button triggers `<audio>` element playback
-- [ ] Audio URL comes from GraphQL `audio_url` field
+- [ ] Audio URL comes from GraphQL `audioUrl` field
+- [ ] Replay restarts playback from the beginning
 
-### M5: Thai keyboard + input
+### M6: Thai keyboard + input
 
 Type text on the virtual keyboard, see it appear in an input field.
 
@@ -54,8 +84,9 @@ Type text on the virtual keyboard, see it appear in an input field.
 - [ ] Clicking a key appends the character to a local `typed` ref
 - [ ] Active (next expected) key is highlighted visually
 - [ ] Input field reflects `typed` value in real time
+- [ ] Physical-keyboard input updates the same state
 
-### M6: Validation
+### M7: Validation
 
 Compare typed text against the target exercise sentence and show result.
 
@@ -63,19 +94,11 @@ Compare typed text against the target exercise sentence and show result.
 - [ ] Show green "Correct" or red "Incorrect — try again"
 - [ ] On correct: auto-load the next exercise
 - [ ] On incorrect: reveal the correct answer and let the user continue
-
-### M7: Exercise model + DB
-
-Only now: persist data for exercises and progress.
-
-- [ ] `Exercise` model with FK relationships for `original_audio` (FileField)
-- [ ] `Progress` model — `exercise` (FK), `typed_text`, `is_correct`, `attempts`
-- [ ] Migration created and applied
-- [ ] All 100 MVP exercises in DB so the API query in M3 can return real data
+- [ ] No `Progress` row is written — checking stays client-side for the MVP
 
 ---
 
-### Core loop is complete at the end of M6:
+### Core loop is complete at the end of M7:
 
 See sentence → hear audio → type → check → feedback → next exercise.
 
@@ -135,3 +158,11 @@ Add features and scale.
 | 2026-04-21 | PostgreSQL 17 (latest) | Latest stable version |
 | 2026-04-21 | Podman for local development | Rootless, docker-compatible, recommended |
 | 2026-04-21 | App name: TypeLearn (generic) | Multi-language future; avoid hardcoding "Thai" |
+| 2026-08-21 | Model and data load move before the GraphQL milestone | M2 claimed to return 100 exercises from a model M7 created; each milestone must depend only on earlier ones |
+| 2026-08-21 | Corpus source is `validated.tsv`, not `validated_sentences.tsv` | The latter has no `up_votes` and no clip path, so the documented filter could never yield a playable exercise |
+| 2026-08-21 | Difficulty derived from sentence length + clip duration | Common Voice carries no difficulty field; a linguistic model needs learner validation and can replace this later |
+| 2026-08-21 | GraphQL contract written in camelCase | Strawberry's `auto_camel_case` is on by default; matching it beats disabling a well-known default |
+| 2026-08-21 | Django project named `typelearn` | Honors the 2026-04-21 language-neutral naming decision that `thai_learn` contradicted |
+| 2026-08-21 | Podman stays in for local development | Confirmed after a draft edit marked it out of scope; keeps local dev on the documented PostgreSQL 17 target instead of diverging onto SQLite |
+| 2026-08-22 | Repository renamed ToneType → TypeLearn | The app was named TypeLearn in every document and code-level name; only the folder and GitHub repo still said ToneType |
+| 2026-08-21 | `openspec/specs/` is normative; `specs/` is background | Requirements get a testable home; mission narrative and decision log stay readable prose |
