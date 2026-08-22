@@ -56,6 +56,29 @@ poetry run python manage.py runserver
 poetry run pytest              # the test suite builds its own miniature corpus
 ```
 
+The GraphQL endpoint is at `/graphql/`, and serves GraphiQL while `DEBUG` is on:
+
+```bash
+curl -s localhost:8000/graphql/ -H 'Content-Type: application/json' \
+  -d '{"query":"{ exercises(limit: 1) { id sentence audioUrl difficulty } }"}'
+```
+
+`audioUrl` is absolute, so the frontend on the Vite origin can load it directly.
+Browser origins allowed to query the endpoint come from `CORS_ALLOWED_ORIGINS`,
+which defaults to the Vite dev server on `localhost` and `127.0.0.1`.
+
+`exercises` also takes `filters` and `ordering`, so a caller can ask for a slice of
+the catalog instead of sorting it client-side:
+
+```graphql
+{ exercises(limit: 1, filters: {difficulty: {lte: 2}}, ordering: [{upVotes: DESC}]) { sentence } }
+```
+
+The schema is read-only and public — there are no mutations, so nothing there needs
+authentication yet. Query size is capped by `STRAWBERRY_MAX_TOKENS`,
+`STRAWBERRY_MAX_ALIASES`, and `STRAWBERRY_MAX_QUERY_DEPTH`, and introspection is
+served only while `DEBUG` is on.
+
 ### 4. Frontend
 
 ```bash
@@ -63,6 +86,9 @@ cd src/frontend
 npm install
 npm run dev
 ```
+
+The app reads the backend URL from `VITE_API_URL` in `.env.development`; override it
+with `.env.development.local` if the backend runs somewhere else.
 
 ## Working on this project
 
