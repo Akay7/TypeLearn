@@ -1,0 +1,40 @@
+schema: spec-driven
+
+context: |
+  TypeLearn — a language-learning app where users learn by typing what they hear.
+  Core loop: hear audio → read the expected sentence → type it → get instant feedback.
+  Thai is the first dataset; the app is designed to support any language.
+
+  Tech stack:
+  - Backend: Django + Strawberry GraphQL (not DRF), Poetry, pytest + pytest-django
+  - Database: PostgreSQL 17 in a Podman container via podman-compose (not Docker,
+    not a host-installed server). Credentials in db.env, never committed.
+  - Frontend: Vue 3 + Vite + Pinia + Tailwind CSS. Custom on-screen Thai keyboard,
+    no external keyboard dependency.
+  - Storage: Django FileField under MEDIA_ROOT for audio clips.
+
+  Corpus:
+  - Mozilla Common Voice Thai 25.0, on disk in the release directory
+    cv-corpus-25.0-2026-03-09/th — outside the repository, read in place,
+    never committed. Its path is a parameter, never hardcoded.
+  - Select exercises from validated.tsv (has path + up_votes). Never from
+    validated_sentences.tsv, which has neither.
+  - difficulty is derived at ingestion from sentence length and clip duration;
+    the corpus has no difficulty field.
+
+  Conventions:
+  - Code-level names must not hardcode "Thai" — the Django project is `typelearn`.
+    Genuinely language-specific components (the Thai keyboard layout) may.
+  - GraphQL fields are camelCase; Strawberry's auto_camel_case default stays on.
+  - Every Django CharField declares an explicit max_length (fields.E120 otherwise
+    blocks every management command).
+  - Backend lives in src/backend/, frontend in src/frontend/, ignored data in data/.
+  - specs/ holds background docs (mission, roadmap, tech-stack); openspec/specs/ is
+    normative for behavior.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
