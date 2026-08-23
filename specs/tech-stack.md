@@ -62,6 +62,9 @@ the compose file references the env file rather than inlining literals.
 | Routing | vue-router | latest | Official, well-integrated |
 | HTTP | graphql-tag / native fetch | — | GraphQL client or direct fetch for MVP |
 | Keyboard | Custom component | — | On-screen Thai characters, no external dependency |
+| Thai font | Noto Sans Thai Looped (variable) | 5.x via `@fontsource-variable` | Looped heads are how a beginner tells Thai letters apart; self-hosted, so no font CDN and no offline gap |
+| Unit tests | Vitest | latest | Same Vite pipeline, no second build config |
+| Browser tests | Playwright (Chromium) | latest | A loaded font, a playing clip, and a stable layout are only true on screen; stubs the backend so no database is needed |
 
 Tailwind 4 is configured through the `@tailwindcss/vite` plugin and a single
 `@import "tailwindcss";` in the stylesheet. There is no `tailwind.config.js`, no

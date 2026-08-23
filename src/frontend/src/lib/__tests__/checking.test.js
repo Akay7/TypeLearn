@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { compare, dropLast, hasDiverged, nextExpected } from '../checking'
+import { compare, dropLast, hasDiverged, isComplete, nextExpected } from '../checking'
 
 // "Hello" — five code points, two of which are a vowel sign and a tone mark
 // that attach to the consonant before them.
@@ -31,6 +31,41 @@ describe('compare', () => {
     // NFD and NFC of the same text are the same answer to a learner reading
     // the screen, so they must be the same answer to the checker.
     expect(compare(SENTENCE.normalize('NFD'), SENTENCE.normalize('NFC'))).toBe(true)
+  })
+})
+
+describe('isComplete', () => {
+  it('is false while the answer is shorter than the target', () => {
+    expect(isComplete('สวัส', SENTENCE)).toBe(false)
+  })
+
+  it('is true at exactly the target length', () => {
+    expect(isComplete(SENTENCE, SENTENCE)).toBe(true)
+  })
+
+  it('is true past the target length, because an overlong answer is finished too', () => {
+    expect(isComplete(`${SENTENCE}ก`, SENTENCE)).toBe(true)
+  })
+
+  it('is false for an empty answer', () => {
+    expect(isComplete('', SENTENCE)).toBe(false)
+  })
+
+  it('ignores whitespace at the ends, exactly as compare does', () => {
+    // The trailing space compare forgives must not decide when to check.
+    expect(isComplete(`${SENTENCE} `, SENTENCE)).toBe(true)
+    expect(isComplete('สวัส ', SENTENCE)).toBe(false)
+  })
+
+  it('counts combining marks as the characters the learner typed', () => {
+    // Four consonants and two marks: an answer of four bare consonants is not
+    // complete, however close it looks on screen.
+    expect(isComplete('สวสด', SENTENCE)).toBe(false)
+    expect(isComplete('สวสดีก', SENTENCE)).toBe(true)
+  })
+
+  it('measures against the target, not against any idea of a word', () => {
+    expect(isComplete('ก', 'ก')).toBe(true)
   })
 })
 

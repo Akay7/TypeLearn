@@ -119,6 +119,9 @@ Add variety and usability.
 | Keyboard layout switching | Thai + source language overlay | Phase 1 |
 | Correct answer reveal | Show what you missed | Phase 1 |
 | Session summary | Score + stats at end | Phase 2 |
+| Looped Thai typeface | Bundle a looped face so letter heads are legible to a beginner | Phase 1 |
+| Audio plays on presentation | Hear the clip before typing, so the loop is listening and not copying | Phase 1 |
+| Automatic answer checking | Check when the answer reaches the target's length | Phase 1 |
 
 ## Phase 3: Persistence & Accounts
 
@@ -169,3 +172,8 @@ Add features and scale.
 | 2026-08-22 | Repository renamed ToneType → TypeLearn | The app was named TypeLearn in every document and code-level name; only the folder and GitHub repo still said ToneType |
 | 2026-08-21 | `openspec/specs/` is normative; `specs/` is background | Requirements get a testable home; mission narrative and decision log stay readable prose |
 | 2026-08-22 | Corpus selection is a deterministic sort, not a seeded sample | The spec asked for "the same seed" without defining one, so two runs with different seeds could both comply while producing different datasets; ordering by up_votes desc, duration asc, sentence_id asc makes the 100 exercises a pure function of the corpus |
+| 2026-08-23 | Thai renders in a bundled looped face, not the system default | A beginner identifies Thai letters by the head — the loop most consonants open with — and `system-ui` resolves to a loopless face on many systems, erasing the cue the learner depends on |
+| 2026-08-23 | The font is self-hosted via Fontsource, not the Google Fonts CDN | An external request on every load, a privacy surface, and a broken app offline, all to avoid one dependency that carries no code |
+| 2026-08-23 | The clip plays automatically when an exercise is presented | The core loop is *hear* then type; a clip that waits to be asked for lets the learner read and copy instead |
+| 2026-08-23 | An answer is checked when it reaches the target's length | Pressing a key to be told what the app already knows carries no information; Enter and the Check control stay for checking early |
+| 2026-08-23 | The incorrect verdict no longer reveals the expected sentence | `SentenceView` displays it at `text-5xl` throughout, so the reveal duplicated it — and it was the tallest variable-height element pushing the keyboard down mid-exercise |

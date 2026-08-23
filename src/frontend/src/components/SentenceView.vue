@@ -16,7 +16,7 @@ const characterCount = computed(() =>
 </script>
 
 <template>
-  <section class="flex flex-col items-center gap-6 text-center">
+  <section class="flex w-full flex-col items-center gap-3 text-center">
     <p v-if="store.status === 'loading'" class="text-lg opacity-60">
       Loading an exercise…
     </p>
@@ -30,15 +30,22 @@ const characterCount = computed(() =>
     </p>
 
     <template v-else>
-      <p lang="th" class="text-5xl leading-relaxed font-medium">
+      <!-- Tight leading, not relaxed: a sentence is one or two lines and the
+           space under it is better spent on the keyboard. -->
+      <p lang="th" class="text-5xl leading-tight font-medium">
         {{ store.current.sentence }}
       </p>
 
-      <p class="text-sm tracking-wide uppercase opacity-60">
-        {{ characterCount }} characters
-      </p>
+      <!-- The hint and the clip share a row. Neither is tall, and the whole
+           exercise has to fit on a laptop screen without the learner scrolling
+           to find the keys their fingers are supposed to be on. -->
+      <div class="flex items-center gap-4">
+        <p class="text-sm tracking-wide uppercase opacity-60">
+          {{ characterCount }} characters
+        </p>
 
-      <AudioPlayer :key="store.current.id" :src="store.current.audioUrl" />
+        <AudioPlayer :key="store.current.id" :src="store.current.audioUrl" />
+      </div>
 
       <AnswerInput />
 

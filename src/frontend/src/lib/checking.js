@@ -29,6 +29,22 @@ export function compare(typed, target) {
 }
 
 /**
+ * Whether the typed answer is long enough to be a finished attempt.
+ *
+ * This is the trigger for checking without being asked: an answer that has
+ * reached the target's length is as done as it is going to get, and asking the
+ * learner to press a key to be told so is a step that carries no information.
+ * It says nothing about whether the answer is *right* — `compare` does that.
+ *
+ * Both sides are trimmed exactly as `compare` trims them, so the space a
+ * learner leaves after the last word neither triggers a check early nor holds
+ * one back.
+ */
+export function isComplete(typed, target) {
+  return [...normalize(typed).trim()].length >= [...normalize(target).trim()].length
+}
+
+/**
  * The next character the learner is expected to type, or `null` when the typed
  * answer has diverged from the target or already reaches its end.
  *

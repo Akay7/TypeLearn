@@ -104,8 +104,8 @@ function toggleLayer() {
   <!-- A definite width, not w-fit: the shift layer carries one key more than the
        base layer, and a board that changed width when the layer flipped would
        move every key out from under the finger aiming at it. The number row is
-       the widest, so it sets the width the other rows fill. -->
-  <div class="flex w-[47.25rem] flex-col gap-1 rounded-xl bg-black/5 p-4 dark:bg-white/5">
+       the widest, so it sets `--board`, the width of the whole exercise column. -->
+  <div class="flex w-[var(--board)] flex-col gap-1 rounded-xl bg-black/5 p-4 dark:bg-white/5">
     <div
       v-for="(keys, row) in rows"
       :key="row"

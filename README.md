@@ -85,8 +85,13 @@ served only while `DEBUG` is on.
 cd src/frontend
 npm install
 npm run dev
-npm run test              # vitest, over the pure logic in src/lib/
+npm run test              # vitest, over the pure logic in src/lib/ and the store
+npm run test:e2e          # playwright, driving Chromium against the dev server
 ```
+
+The e2e suite needs no backend: it stubs the GraphQL catalog and synthesises its own
+audio clip, so it runs with no database, no ingested corpus, and no network. The
+first run downloads Chromium — `npx playwright install chromium`.
 
 The app reads the backend URL from `VITE_API_URL` in `.env.development`; override it
 with `.env.development.local` if the backend runs somewhere else.
@@ -102,6 +107,14 @@ that presses them — the two hands mirror, so one legend of five covers both �
 key names its finger on hover. `npm run test` covers the layout
 table and the comparison logic; the layout test is what catches a wrong or missing
 key, since every character the corpus uses has to be reachable on screen.
+
+Thai is rendered in a looped face the app bundles rather than the system default,
+because a beginner tells the letters apart by their heads. The clip plays by itself
+when an exercise appears, an answer is checked as soon as it reaches the target's
+length, and a verdict is drawn into space already reserved for it so the keyboard
+never moves under your fingers. Those four are the ones `npm run test:e2e` exists
+for — a font being loaded, a clip playing, and two elements staying put are claims
+only a browser can settle.
 
 ## Working on this project
 
