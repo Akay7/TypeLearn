@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue'
 
+import AnswerInput from './AnswerInput.vue'
 import AudioPlayer from './AudioPlayer.vue'
+import ThaiKeyboard from './ThaiKeyboard.vue'
 import { useExerciseStore } from '../stores/exercise'
 
 const store = useExerciseStore()
@@ -36,7 +38,11 @@ const characterCount = computed(() =>
         {{ characterCount }} characters
       </p>
 
-      <AudioPlayer :src="store.current.audioUrl" />
+      <AudioPlayer :key="store.current.id" :src="store.current.audioUrl" />
+
+      <AnswerInput />
+
+      <ThaiKeyboard />
     </template>
   </section>
 </template>

@@ -76,29 +76,31 @@ Click a button → play the clip served from `MEDIA_ROOT`.
 - [x] Audio URL comes from GraphQL `audioUrl` field
 - [x] Replay restarts playback from the beginning
 
-### M6: Thai keyboard + input
+### M6: Thai keyboard + input — done
 
 Type text on the virtual keyboard, see it appear in an input field.
 
-- [ ] Component `ThaiKeyboard` renders rows of Thai consonants/vowels/symbols
-- [ ] Clicking a key appends the character to a local `typed` ref
-- [ ] Active (next expected) key is highlighted visually
-- [ ] Input field reflects `typed` value in real time
-- [ ] Physical-keyboard input updates the same state
+- [x] Component `ThaiKeyboard` renders the Kedmanee layout — the standard Thai
+      keyboard — in four staggered rows, with a Shift layer
+- [x] Clicking a key appends the character to the store's `typed` state
+- [x] Active (next expected) key is highlighted visually, and the displayed layer
+      switches on its own to whichever layer holds it
+- [x] Input field reflects `typed` value in real time
+- [x] Physical-keyboard input updates the same state
 
-### M7: Validation
+### M7: Validation — done
 
 Compare typed text against the target exercise sentence and show result.
 
-- [ ] On pressing "Check" (or Enter), compare `typed` with `exercise.sentence`
-- [ ] Show green "Correct" or red "Incorrect — try again"
-- [ ] On correct: auto-load the next exercise
-- [ ] On incorrect: reveal the correct answer and let the user continue
-- [ ] No `Progress` row is written — checking stays client-side for the MVP
+- [x] On pressing "Check" (or Enter), compare `typed` with `exercise.sentence`
+- [x] Show green "Correct" or red "Incorrect — try again"
+- [x] On correct: auto-load the next exercise
+- [x] On incorrect: reveal the correct answer and let the user continue
+- [x] No `Progress` row is written — checking stays client-side for the MVP
 
 ---
 
-### Core loop is complete at the end of M7:
+### Core loop is complete at the end of M7 — done:
 
 See sentence → hear audio → type → check → feedback → next exercise.
 
