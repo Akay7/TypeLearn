@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import { compare, dropLast } from '../lib/checking'
+import { compare, dropLast, isComplete } from '../lib/checking'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/graphql/'
 
@@ -92,19 +92,35 @@ export const useExerciseStore = defineStore('exercise', () => {
 
   function append(char) {
     typed.value += char
-    // The verdict described the answer as it was, not as it is now.
-    result.value = null
   }
 
   function backspace() {
     typed.value = dropLast(typed.value)
-    result.value = null
   }
+
+  // Every way of changing the answer ends here — on-screen keys through
+  // `append`, the physical keyboard through the input's `v-model` — so this is
+  // the one place that sees all typing. Two things follow from every change:
+  // the previous verdict described an older answer and has to go, and an answer
+  // that has reached the target's length is a finished attempt worth judging
+  // without the learner having to ask.
+  watch(typed, () => {
+    result.value = null
+
+    if (current.value && isComplete(typed.value, current.value.sentence)) {
+      check()
+    }
+  })
 
   function check() {
     if (!current.value) {
       return
     }
+
+    // Whatever this check decides replaces the last one, including its pending
+    // advance: a correct answer typed one character too far must not still be
+    // carried forward by the timer the correct answer scheduled.
+    cancelAdvance()
 
     const correct = compare(typed.value, current.value.sentence)
     result.value = correct ? 'correct' : 'incorrect'
@@ -112,7 +128,6 @@ export const useExerciseStore = defineStore('exercise', () => {
     // Checking is client-side for the MVP: nothing is sent, no Progress row is
     // written. Only the move to the next exercise happens on its own.
     if (correct) {
-      cancelAdvance()
       advanceTimer = setTimeout(next, ADVANCE_DELAY_MS)
     }
   }

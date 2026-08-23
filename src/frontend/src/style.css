@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Self-hosted, so the app renders identically offline and calls no font CDN.
+   The package declares one @font-face per subset; a browser downloads only the
+   subset whose unicode-range the page actually renders. */
+@import "@fontsource-variable/noto-sans-thai-looped";
 
 :root {
   --text: #6b6375;
@@ -6,6 +10,15 @@
   --bg: #fff;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* The width of the on-screen keyboard, and so of the column the exercise is
+     practised in: the input the learner types into lines up with the keys they
+     type on, rather than running wider than the board underneath it. */
+  --board: 47.25rem;
+
+  /* A looped face, not the system default. A learner who cannot yet tell Thai
+     letters apart identifies them by the head — the loop most consonants open
+     with — and a loopless face erases exactly that cue. */
+  --thai: 'Noto Sans Thai Looped Variable', var(--sans);
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
@@ -32,6 +45,19 @@
 
 body {
   margin: 0;
+}
+
+/* Every Thai surface already marks itself for shaping, so the attribute is the
+   selector: no component has to remember a class, and none can drift out of
+   sync. Zero specificity, so a component can still override it. */
+:where([lang='th']) {
+  font-family: var(--thai);
+}
+
+/* The answer field is Thai, but the hint inside it is the interface talking:
+   English chrome keeps the interface's own face. */
+:where([lang='th'])::placeholder {
+  font-family: var(--sans);
 }
 
 h1 {
