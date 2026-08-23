@@ -85,10 +85,23 @@ served only while `DEBUG` is on.
 cd src/frontend
 npm install
 npm run dev
+npm run test              # vitest, over the pure logic in src/lib/
 ```
 
 The app reads the backend URL from `VITE_API_URL` in `.env.development`; override it
 with `.env.development.local` if the backend runs somewhere else.
+
+The whole catalog is fetched in one query at startup and practised in a shuffled
+order, so advancing after a correct answer costs no round-trip. Answers are checked
+in the browser and nothing is recorded — `Progress` is unused by the MVP.
+
+The on-screen keyboard is the Kedmanee layout with a Shift layer, and the key for the
+next expected character is highlighted as you type — and if the answer goes wrong the
+backspace key is highlighted instead, so the keyboard always names a key worth pressing. Keys are coloured by the finger
+that presses them — the two hands mirror, so one legend of five covers both — and each
+key names its finger on hover. `npm run test` covers the layout
+table and the comparison logic; the layout test is what catches a wrong or missing
+key, since every character the corpus uses has to be reachable on screen.
 
 ## Working on this project
 

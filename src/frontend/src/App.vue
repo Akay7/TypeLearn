@@ -10,7 +10,7 @@ onMounted(() => store.load())
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-10 px-6">
+  <main class="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center gap-10 px-6 py-10">
     <h1 class="text-sm font-medium tracking-[0.3em] uppercase opacity-60">TypeLearn</h1>
     <SentenceView />
   </main>

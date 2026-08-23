@@ -1,44 +1,4 @@
-# typing-practice Specification
-
-## Purpose
-TBD - created by archiving change align-specs-with-reality. Update Purpose after archive.
-## Requirements
-### Requirement: Exercise presentation
-The frontend SHALL display one exercise at a time in a single centered column: the target sentence in large text, and a length hint below it.
-
-#### Scenario: Loading the first exercise
-- **WHEN** the learner opens the application
-- **THEN** an exercise is fetched from the API and its sentence is rendered in large text, with no console error
-
-#### Scenario: Length hint
-- **WHEN** an exercise is displayed
-- **THEN** a hint showing the expected character count is rendered beneath the sentence
-
-### Requirement: Loading and failure states
-The frontend SHALL tell the learner what is happening while an exercise is being fetched, and SHALL show a readable message instead of a blank screen when the exercise cannot be obtained.
-
-#### Scenario: While fetching
-- **WHEN** the application has issued the exercise query and no response has arrived
-- **THEN** a loading indication is rendered in place of the sentence
-
-#### Scenario: Backend unreachable
-- **WHEN** the exercise query fails — the backend is down, the request is blocked by CORS, or the response carries GraphQL errors
-- **THEN** a plain error message is rendered explaining that the exercise could not be loaded, and the browser console carries the underlying error
-
-#### Scenario: Empty catalog
-- **WHEN** the query succeeds but returns no exercises
-- **THEN** a message stating that no exercises are available is rendered, rather than an empty sentence area or a crash
-
-### Requirement: Audio playback
-The learner SHALL be able to play the exercise's audio on demand and replay it any number of times.
-
-#### Scenario: Playing audio
-- **WHEN** the learner activates the play control
-- **THEN** the clip at the exercise's `audioUrl` plays through an HTML5 `<audio>` element
-
-#### Scenario: Replaying
-- **WHEN** the learner activates replay while a clip is playing or after it ended
-- **THEN** playback restarts from the beginning
+## MODIFIED Requirements
 
 ### Requirement: On-screen Thai keyboard
 The frontend SHALL provide a custom on-screen keyboard of Thai consonants, vowels, tone marks, and symbols, with no external keyboard dependency. The keys SHALL be arranged in the Kedmanee layout — the standard Thai keyboard — so that the position a learner reads on screen is the position their finger takes on a physical keyboard. Characters that Kedmanee reaches through Shift SHALL be available through an on-screen Shift control that swaps the displayed layer.
@@ -79,6 +39,27 @@ The frontend SHALL provide a custom on-screen keyboard of Thai consonants, vowel
 - **WHEN** the learner removes the last character, whether with the on-screen backspace or the physical one
 - **THEN** the typed answer shortens by one character and the next-key highlight follows it back, and the backspace key stops being highlighted as soon as the answer is a correct prefix again
 
+### Requirement: Session flows without configuration
+The MVP SHALL run with no login, no account, and no configuration by the learner.
+
+#### Scenario: First visit
+- **WHEN** a new visitor opens the application
+- **THEN** they reach a playable exercise directly, with no sign-in, setup, or language selection step
+
+#### Scenario: Advancing through exercises
+- **WHEN** the learner answers correctly
+- **THEN** a different exercise from the catalog is presented next
+
+#### Scenario: No exercise repeats while unseen ones remain
+- **WHEN** the learner answers correctly and the session has not yet presented every exercise in the catalog
+- **THEN** the exercise presented next is one the session has not shown before
+
+#### Scenario: The catalog is exhausted
+- **WHEN** the learner answers the last remaining exercise of the catalog correctly
+- **THEN** practice continues from the beginning of the catalog rather than ending in a blank screen or an error
+
+## ADDED Requirements
+
 ### Requirement: Finger guidance on the keyboard
 Key position alone does not tell a learner which finger to press a key with, so the on-screen keyboard SHALL show the touch-typing finger for every key, and SHALL explain what the indication means rather than relying on an unexplained visual code.
 
@@ -102,25 +83,6 @@ Key position alone does not tell a learner which finger to press a key with, so 
 - **WHEN** a key is highlighted as the next expected character
 - **THEN** the highlight remains distinguishable regardless of which finger colour that key carries
 
-### Requirement: Answer checking
-The learner SHALL be able to check the typed answer against the target sentence. For the MVP the comparison SHALL happen client-side, with no backend write.
-
-#### Scenario: Correct answer
-- **WHEN** the learner checks an answer exactly matching the target sentence
-- **THEN** a green "correct" result is shown and the next exercise loads automatically
-
-#### Scenario: Incorrect answer
-- **WHEN** the learner checks an answer that does not match
-- **THEN** a red "incorrect" result is shown, the expected sentence is revealed, and the learner may keep trying
-
-#### Scenario: Checking via Enter
-- **WHEN** the learner presses Enter in the input field
-- **THEN** the answer is checked exactly as if the Check control had been activated
-
-#### Scenario: No attempt is persisted
-- **WHEN** any answer is checked
-- **THEN** no request is sent to record the attempt
-
 ### Requirement: Answer state resets between exercises
 When a new exercise is presented, the frontend SHALL clear everything belonging to the previous one, so the learner starts from an empty field with no stale verdict on screen.
 
@@ -135,22 +97,3 @@ When a new exercise is presented, the frontend SHALL clear everything belonging 
 #### Scenario: The keyboard points at the new sentence
 - **WHEN** the next exercise is presented
 - **THEN** the highlighted key is the one for the first character of the new sentence
-
-### Requirement: Session flows without configuration
-The MVP SHALL run with no login, no account, and no configuration by the learner.
-
-#### Scenario: First visit
-- **WHEN** a new visitor opens the application
-- **THEN** they reach a playable exercise directly, with no sign-in, setup, or language selection step
-
-#### Scenario: Advancing through exercises
-- **WHEN** the learner answers correctly
-- **THEN** a different exercise from the catalog is presented next
-
-#### Scenario: No exercise repeats while unseen ones remain
-- **WHEN** the learner answers correctly and the session has not yet presented every exercise in the catalog
-- **THEN** the exercise presented next is one the session has not shown before
-
-#### Scenario: The catalog is exhausted
-- **WHEN** the learner answers the last remaining exercise of the catalog correctly
-- **THEN** practice continues from the beginning of the catalog rather than ending in a blank screen or an error
