@@ -1,0 +1,61 @@
+# Ingestion, on demand — not part of bringing the stack up.
+#
+# `load_corpus` reads the Common Voice release in place and copies the ~100
+# selected clips into MEDIA_ROOT. It takes minutes and only has to happen when
+# the catalog is empty or the selection changes, so it is a Tilt button rather
+# than an initContainer.
+#
+# The corpus never enters an image: it is mounted from the host through the kind
+# node, read-only, and its path stays a parameter — CORPUS_PATH in the
+# environment file, defaulting to where kind.yaml mounts it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ingest
+spec:
+  # Keep the pod around after it finishes so its log can be read from the Tilt
+  # UI; re-running replaces the Job.
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: ingest
+          image: typelearn-backend
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - 'python manage.py load_corpus "${CORPUS_PATH:-/corpus}"'
+          envFrom:
+            - configMapRef:
+                name: backend-env
+          env:
+            # CNPG generates this secret for the Cluster above; these are the
+            # only five keys Django reads, mapped to the names it expects rather
+            # than injected wholesale as bare `host`, `port`, and `user`.
+            - name: POSTGRES_DB
+              valueFrom: {secretKeyRef: {name: postgres-app, key: dbname}}
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: postgres-app, key: username}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: postgres-app, key: password}}
+            - name: POSTGRES_HOST
+              valueFrom: {secretKeyRef: {name: postgres-app, key: host}}
+            - name: POSTGRES_PORT
+              valueFrom: {secretKeyRef: {name: postgres-app, key: port}}
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+            - name: corpus
+              mountPath: /corpus
+              readOnly: true
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+        - name: corpus
+          hostPath:
+            path: /corpus
+            type: Directory

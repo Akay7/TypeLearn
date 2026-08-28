@@ -1,0 +1,40 @@
+# What makes the application one origin, and so what makes CORS unnecessary.
+#
+# Django's paths go to the backend; everything else falls through to the
+# frontend. Gateway API matches more specific paths before the "/" catch-all,
+# and the backend rules are listed first regardless.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: typelearn
+spec:
+  parentRefs:
+    - name: typelearn-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /graphql
+        - path:
+            # The ingested clips. Same origin as the page, so <audio> loads them
+            # with no CORS and no separate media host.
+            type: PathPrefix
+            value: /media
+        - path:
+            type: PathPrefix
+            value: /admin
+        - path:
+            # Django's own static files (the admin's CSS and JS). The frontend's
+            # bundles live under /assets, so the two never collide.
+            type: PathPrefix
+            value: /static
+      backendRefs:
+        - name: backend
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: frontend
+          port: 80

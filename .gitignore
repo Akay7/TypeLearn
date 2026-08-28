@@ -30,3 +30,9 @@ dist-ssr/
 # Editors and OS
 .DS_Store
 *.swp
+
+# Local configuration, read by the cluster and by host-run management commands.
+.env
+
+# Tilt scratch (generated namespace overlay)
+.tilt/

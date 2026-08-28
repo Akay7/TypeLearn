@@ -12,89 +12,100 @@ app is designed for any language.
 
 ## Local setup
 
-Requires Podman, Poetry, and Node.
+The whole application runs in a local Kubernetes cluster, on one origin, the way
+a deployment would. That is why the backend carries no CORS configuration at all:
+the Gateway serves the SPA, the GraphQL endpoint, and the audio from the same
+address, so there is no cross-origin request to permit.
 
-### 1. Database
+### Prerequisites
+
+`docker`, `kind`, `tilt`, `kubectl`, and `helm`. Podman is still fine for
+everything else, but **kind must drive Docker**: kind 0.32 cannot drive podman 6
+— its `ps --format` template errors — so `scripts/tilt-up.sh` sets
+`KIND_EXPERIMENTAL_PROVIDER=docker` for you. If you run `tilt` directly, export
+it yourself or Tilt will build images the cluster cannot pull.
+
+### 1. Create the cluster
+
+Once per machine. Every worktree shares it.
 
 ```bash
-cp db.example.env db.env       # then set a real POSTGRES_PASSWORD
-podman network create typelearn-net
-podman-compose up -d
+kind create cluster --config "$(scripts/kind-config.sh --write)"
 ```
 
-The `typelearn-db-data` volume keeps the database across container restarts.
+The config is generated rather than committed: it mounts `data/media` (the
+ingested clips) and, if you set `TYPELEARN_CORPUS_DIR`, the Common Voice release.
+Both paths differ per machine, so neither is written into the repository.
 
-### 2. Backend
-
-Django reads its database credentials from the environment — the same variables the
-container gets from `db.env` — so export them before running management commands:
+### 2. Bring the stack up
 
 ```bash
-set -a; . ./db.env; set +a
-cd src/backend
-poetry install
-poetry run python manage.py migrate
+cp .env.example .env      # the Tiltfile does this for you if you forget
+scripts/tilt-up.sh
 ```
+
+That builds both images, installs what the cluster is missing the first time
+(Calico for the CNI and the Gateway API, CloudNativePG for PostgreSQL), applies
+the manifests, and serves the app at **http://localhost:8500**. Editing backend
+Python or frontend source reaches the running pods without a rebuild.
+
+The first run takes a few minutes, mostly waiting for Calico. Later runs skip the
+bootstrap.
 
 ### 3. Load exercises
 
-Ingestion needs a local Common Voice release directory (`cv-corpus-25.0-2026-03-09`
-for Thai). It stays outside the repository and is never committed; pass its path as
-an argument:
+Ingestion needs a local Common Voice release directory
+(`cv-corpus-25.0-2026-03-09` for Thai). It stays outside the repository and is
+never committed — point the cluster at it before creating the cluster:
 
 ```bash
-poetry run python manage.py load_corpus /path/to/cv-corpus-25.0-2026-03-09
+export TYPELEARN_CORPUS_DIR=/path/to/cv-corpus-25.0-2026-03-09
 ```
 
-This selects 100 exercises from `th/validated.tsv`, derives each one's difficulty,
-and copies the referenced clips into `MEDIA_ROOT`. The selection is deterministic —
-the same corpus always yields the same 100 exercises — and the command is safe to
-re-run. Useful options: `--count`, `--locale`, `--manifest`.
+Then press **Ingest the corpus** in the Tilt UI. It selects 100 exercises from
+`th/validated.tsv`, derives each one's difficulty, and copies the referenced
+clips into the shared media volume. The selection is deterministic — the same
+corpus always yields the same 100 exercises — and it is safe to re-run.
+
+The clips live in `data/media` on the host, shared by every worktree and outliving
+the cluster, so this only has to happen once even if you delete and recreate the
+cluster. They are written by the container and owned by a mapped user id; the
+Tiltfile keeps the directory writable so you can still remove them yourself.
+
+### Running several worktrees at once
+
+Each git worktree gets its own namespace, its own database, and its own port,
+derived from the worktree's directory name:
 
 ```bash
-poetry run python manage.py runserver
-poetry run pytest              # the test suite builds its own miniature corpus
+git worktree add ../TypeLearn-feature -b feat/something
+cd ../TypeLearn-feature && scripts/tilt-up.sh   # e.g. http://localhost:8517
 ```
 
-The GraphQL endpoint is at `/graphql/`, and serves GraphiQL while `DEBUG` is on:
+`scripts/worktree-env.sh export` prints what a checkout resolves to. The audio is
+deliberately *not* per-worktree: all of them read the one `data/media`, so
+ingestion is done once rather than per checkout. Everything else is isolated —
+an exercise ingested in one worktree is invisible to another.
 
-```bash
-curl -s localhost:8000/graphql/ -H 'Content-Type: application/json' \
-  -d '{"query":"{ exercises(limit: 1) { id sentence audioUrl difficulty } }"}'
-```
+### Running commands and tests
 
-`audioUrl` is absolute, so the frontend on the Vite origin can load it directly.
-Browser origins allowed to query the endpoint come from `CORS_ALLOWED_ORIGINS`,
-which defaults to the Vite dev server on `localhost` and `127.0.0.1`.
-
-`exercises` also takes `filters` and `ordering`, so a caller can ask for a slice of
-the catalog instead of sorting it client-side:
-
-```graphql
-{ exercises(limit: 1, filters: {difficulty: {lte: 2}}, ordering: [{upVotes: DESC}]) { sentence } }
-```
-
-The schema is read-only and public — there are no mutations, so nothing there needs
-authentication yet. Query size is capped by `STRAWBERRY_MAX_TOKENS`,
-`STRAWBERRY_MAX_ALIASES`, and `STRAWBERRY_MAX_QUERY_DEPTH`, and introspection is
-served only while `DEBUG` is on.
-
-### 4. Frontend
+No database port is exposed; the database is reached from inside the cluster. The
+Tilt UI has buttons for migrations, the backend test suite, and ingestion. The
+frontend suites run on the host:
 
 ```bash
 cd src/frontend
 npm install
-npm run dev
 npm run test              # vitest, over the pure logic in src/lib/ and the store
-npm run test:e2e          # playwright, driving Chromium against the dev server
+npm run test:e2e          # playwright, driving Chromium against its own dev server
 ```
 
-The e2e suite needs no backend: it stubs the GraphQL catalog and synthesises its own
-audio clip, so it runs with no database, no ingested corpus, and no network. The
-first run downloads Chromium — `npx playwright install chromium`.
+The e2e suite needs no backend and no cluster: it stubs the GraphQL catalog and
+synthesises its own audio clip. The first run downloads Chromium —
+`npx playwright install chromium`.
 
-The app reads the backend URL from `VITE_API_URL` in `.env.development`; override it
-with `.env.development.local` if the backend runs somewhere else.
+`VITE_API_URL` is a same-origin path (`/graphql/`), because the Gateway routes
+that prefix to Django. There is no other origin to point it at.
 
 The whole catalog is fetched in one query at startup and practised in a shuffled
 order, so advancing after a correct answer costs no round-trip. Answers are checked

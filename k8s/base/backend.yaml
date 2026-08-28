@@ -1,0 +1,118 @@
+# Django + Strawberry, behind the Gateway at /graphql/, /media/, /admin/, /static/.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+        # Migrations are an admin step, run before the application serves rather
+        # than from inside it. The retry loop is not defensive padding: CNPG
+        # takes a while to bootstrap its cluster, so a database that is not yet
+        # accepting connections is the expected state at first start, not a
+        # failure. After ~3 minutes a final attempt surfaces a real migration
+        # error instead of looping on it forever.
+        - name: migrate
+          image: typelearn-backend
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              for i in $(seq 1 60); do
+                python manage.py migrate --noinput && exit 0
+                echo "waiting for postgres ($i)..."; sleep 3
+              done
+              python manage.py migrate --noinput
+          envFrom:
+            - configMapRef:
+                name: backend-env
+          env:
+            # CNPG generates this secret for the Cluster above; these are the
+            # only five keys Django reads, mapped to the names it expects rather
+            # than injected wholesale as bare `host`, `port`, and `user`.
+            - name: POSTGRES_DB
+              valueFrom: {secretKeyRef: {name: postgres-app, key: dbname}}
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: postgres-app, key: username}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: postgres-app, key: password}}
+            - name: POSTGRES_HOST
+              valueFrom: {secretKeyRef: {name: postgres-app, key: host}}
+            - name: POSTGRES_PORT
+              valueFrom: {secretKeyRef: {name: postgres-app, key: port}}
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+      containers:
+        - name: backend
+          image: typelearn-backend
+          imagePullPolicy: IfNotPresent
+          # --reload so Tilt's synced source takes effect without a pod restart.
+          # The image's own CMD omits it; the prod overlay uses the image default.
+          command:
+            - gunicorn
+            - typelearn.wsgi:application
+            - --bind
+            - 0.0.0.0:8000
+            - --reload
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: backend-env
+          env:
+            # The same five keys the migrate initContainer maps, for the same
+            # reason: CNPG's secret uses lowercase names, and injecting it
+            # wholesale would put a bare `host`, `port`, and `user` into the
+            # process environment.
+            - name: POSTGRES_DB
+              valueFrom: {secretKeyRef: {name: postgres-app, key: dbname}}
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: postgres-app, key: username}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: postgres-app, key: password}}
+            - name: POSTGRES_HOST
+              valueFrom: {secretKeyRef: {name: postgres-app, key: host}}
+            - name: POSTGRES_PORT
+              valueFrom: {secretKeyRef: {name: postgres-app, key: port}}
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+          readinessProbe:
+            httpGet:
+              path: /graphql/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /graphql/
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000

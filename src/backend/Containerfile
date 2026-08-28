@@ -1,0 +1,69 @@
+# Backend image: Django + Strawberry, served by gunicorn.
+#
+# Staged so Poetry never reaches the shipped image: the builder resolves the
+# locked dependencies into a virtualenv and the runtime copies just that venv,
+# keeping what ships to Python plus the packages the application imports.
+#
+# `dev` adds the test dependencies on top. Development and CI run that one — a
+# pod whose image has no pytest cannot run the test suite, and CI must run the
+# suite inside the artifact it built rather than a separately assembled
+# environment. The production overlay uses `runtime`.
+#
+# Nothing environment-specific is baked in — no corpus, no media, no settings,
+# no secrets. The corpus is mounted where it is needed, MEDIA_ROOT is a volume,
+# and configuration arrives through the environment.
+
+# ---- builder ---------------------------------------------------------------
+FROM python:3.13-slim AS builder
+
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry-cache \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN pip install --no-cache-dir "poetry>=2.0,<3.0"
+
+WORKDIR /app
+
+# Lockfile first: dependencies change far less often than source, so this layer
+# survives most rebuilds.
+COPY pyproject.toml poetry.lock ./
+# --no-root: this is an application, not a distributable package (pyproject says
+# so), so there is nothing of its own to install.
+RUN poetry install --without dev --no-root && rm -rf "$POETRY_CACHE_DIR"
+
+# ---- runtime (what a deployment runs) --------------------------------------
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+# A non-root user, as production would run. The development media directory is
+# made group/other-writable by the bring-up instead of this image running as
+# root: rootless container runtimes map container root to the host user, so
+# running as root here would silently change who owns the files on the host.
+RUN useradd --create-home --uid 1000 app
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --chown=app:app . .
+
+USER app
+
+EXPOSE 8000
+
+# Overridden in development to add --reload; the image default is the one a
+# deployment would use.
+CMD ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+# ---- dev (what development and CI run) -------------------------------------
+# The same image plus the dev dependency group, so `pytest` exists in the pod
+# and in the CI container. Nothing else differs: same Python, same code, same
+# entrypoint.
+FROM builder AS dev-builder
+RUN poetry install --no-root && rm -rf "$POETRY_CACHE_DIR"
+
+FROM runtime AS dev
+COPY --from=dev-builder --chown=app:app /app/.venv /app/.venv

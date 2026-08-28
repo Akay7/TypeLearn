@@ -1,0 +1,24 @@
+# PostgreSQL, run by the CloudNativePG operator the Tiltfile installs.
+#
+# One Cluster per worktree namespace, so each checkout has its own database and
+# neither can read the other's exercises. Storage is the cluster's default
+# StorageClass — kind ships Rancher's local-path-provisioner as `standard`.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+spec:
+  instances: 1
+  # Pinned to 17 because the project's tech-stack and specs say 17. CNPG's own
+  # default is newer; moving is a decision with its own reasons and does not
+  # belong to this change.
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  storage:
+    size: 1Gi
+  bootstrap:
+    initdb:
+      database: typelearn
+      owner: typelearn
+  # A development database on one node: no replicas to fail over to, and a
+  # restart is cheaper than a resync.
+  primaryUpdateStrategy: unsupervised

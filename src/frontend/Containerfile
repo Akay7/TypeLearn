@@ -1,0 +1,49 @@
+# Frontend image, in two stages that are both used.
+#
+#   build — source plus node_modules. Development runs the Vite dev server from
+#           this stage so hot reload survives the move into the cluster, and CI
+#           runs vitest and the Playwright suite inside it, so what is tested is
+#           what was installed rather than a separately assembled environment.
+#   serve — nginx and the built bundle, which is what a deployment runs.
+#
+# The API is same-origin behind the Gateway, so nothing here needs a backend
+# address baked in at build time.
+
+# ---- build -----------------------------------------------------------------
+FROM node:24-slim AS build
+
+WORKDIR /app
+
+# Lockfile first: dependencies change far less often than source.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+# Playwright's browser is not in the base image and is only needed when CI runs
+# the browser suite from this stage; installing it here keeps that job from
+# downloading a browser on every run.
+RUN npx playwright install --with-deps chromium
+
+EXPOSE 5173
+# Development default. --host binds beyond loopback so the Gateway can reach it
+# from outside the pod's own network namespace.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# ---- serve -----------------------------------------------------------------
+FROM build AS bundle
+RUN npm run build
+
+FROM nginx:alpine AS serve
+COPY --from=bundle /app/dist /usr/share/nginx/html
+# The SPA has one entry point: any path the Gateway sends here is a client route,
+# so unknown paths return index.html rather than a 404. Backend paths never
+# arrive — the HTTPRoute sends those to Django.
+RUN printf 'server {\n\
+  listen 80;\n\
+  root /usr/share/nginx/html;\n\
+  location / {\n\
+    try_files $uri $uri/ /index.html;\n\
+  }\n\
+}\n' > /etc/nginx/conf.d/default.conf
+EXPOSE 80
