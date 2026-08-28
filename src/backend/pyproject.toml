@@ -40,3 +40,8 @@ package-mode = false
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "typelearn.settings"
 python_files = ["test_*.py", "*_test.py"]
+# The container runs as a non-root user that does not own /app, so pytest cannot
+# write its cache there and every run prints a PytestCacheWarning. Nothing in
+# this project relies on the cache (no --lf/--sw workflow in CI or the Tilt
+# button), so turn it off rather than carve out a writable path for it.
+addopts = "-p no:cacheprovider"

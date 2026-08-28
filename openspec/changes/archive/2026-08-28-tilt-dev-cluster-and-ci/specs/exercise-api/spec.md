@@ -7,6 +7,10 @@
 - **WHEN** the frontend sets an `<audio>` element's `src` to an exercise's `audioUrl`
 - **THEN** the clip loads and plays, with no path rewriting in the client
 
+#### Scenario: Absolute URL in the response
+- **WHEN** a client queries `{ exercises(limit: 1) { audioUrl } }`
+- **THEN** the returned value begins with `http://` or `https://` and includes the host, not a bare `/media/...` path
+
 #### Scenario: The URL names the origin the client used
 - **WHEN** the API is reached through the Gateway
 - **THEN** `audioUrl` carries that same origin, so the clip is fetched from where the rest of the application is served

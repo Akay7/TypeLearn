@@ -31,8 +31,8 @@
 
 | Layer | Choice | Version | Reason |
 |---|---|---|---|
-| Local cluster | kind | 0.32 | The whole stack runs in Kubernetes locally, so development and a deployment have the same shape |
-| Container runtime | Docker (rootless) | Latest | kind must drive it: kind 0.32 cannot drive podman 6, whose `ps --format` reports labels as a slice and breaks every kind command |
+| Local cluster | kind | 0.33+ | The whole stack runs in Kubernetes locally, so development and a deployment have the same shape |
+| Container runtime | Docker or Podman (rootless) | Latest | Either works, as long as Tilt's `DOCKER_HOST` and kind's provider name the same one. Podman needs kind 0.33+: 0.32 cannot drive podman 6, whose `ps --format` reports labels as a slice |
 | Dev orchestration | Tilt | Latest | One command brings the stack up, syncs source into running pods, and isolates each worktree |
 | CNI + Gateway | Calico | 3.32 | One project for both pod networking and the Gateway API implementation (`tigera-gateway-class`), which is what puts the app on a single origin |
 | PostgreSQL operator | CloudNativePG | 1.30 | The manifest describes a database rather than a pod that happens to run one |

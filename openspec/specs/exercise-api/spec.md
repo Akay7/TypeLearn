@@ -76,24 +76,16 @@ The schema SHALL expose an `exercise(id: ID!)` query returning the matching exer
 - **THEN** the response contains `null` for the field rather than an error
 
 ### Requirement: audioUrl is directly playable
-`audioUrl` SHALL be an absolute URL — scheme, host, port, and media path — that an HTML5 `<audio>` element can load without further transformation by the client. A site-relative path is not sufficient: in development the frontend is served from the Vite origin while the clips are served by Django on another origin, so a relative path would resolve against the wrong host.
+`audioUrl` SHALL be an absolute URL — scheme, host, port, and media path — that an HTML5 `<audio>` element can load without further transformation by the client. It is built from the incoming request, so it names whatever origin the client reached the API through, and no deployment has to configure a media host separately.
 
-#### Scenario: Playing a returned clip
-- **WHEN** the frontend sets an `<audio>` element's `src` to the `audioUrl` from a query result
-- **THEN** the clip loads and plays
+#### Scenario: Playing a clip
+- **WHEN** the frontend sets an `<audio>` element's `src` to an exercise's `audioUrl`
+- **THEN** the clip loads and plays, with no path rewriting in the client
 
 #### Scenario: Absolute URL in the response
 - **WHEN** a client queries `{ exercises(limit: 1) { audioUrl } }`
-- **THEN** the returned value begins with `http://` or `https://` and includes the backend host, not a bare `/media/...` path
+- **THEN** the returned value begins with `http://` or `https://` and includes the host, not a bare `/media/...` path
 
-#### Scenario: Fetched from a different origin
-- **WHEN** the frontend running on the Vite dev origin plays a clip using the returned `audioUrl`
-- **THEN** the request reaches the Django media route and returns the audio file
-
-### Requirement: Cross-origin requests from the dev frontend are allowed
-The Vite dev server runs on a different origin than Django. The backend SHALL permit cross-origin GraphQL requests from the development frontend origin.
-
-#### Scenario: Browser request from the dev server
-- **WHEN** the frontend running on the Vite dev origin issues a GraphQL request
-- **THEN** the browser receives the required CORS headers and the request succeeds
-
+#### Scenario: The URL names the origin the client used
+- **WHEN** the API is reached through the Gateway
+- **THEN** `audioUrl` carries that same origin, so the clip is fetched from where the rest of the application is served

@@ -19,11 +19,37 @@ address, so there is no cross-origin request to permit.
 
 ### Prerequisites
 
-`docker`, `kind`, `tilt`, `kubectl`, and `helm`. Podman is still fine for
-everything else, but **kind must drive Docker**: kind 0.32 cannot drive podman 6
-— its `ps --format` template errors — so `scripts/tilt-up.sh` sets
-`KIND_EXPERIMENTAL_PROVIDER=docker` for you. If you run `tilt` directly, export
-it yourself or Tilt will build images the cluster cannot pull.
+`kind`, `tilt`, `kubectl`, `helm`, and a container runtime.
+
+**Tilt and kind must use the same runtime.** Tilt builds images through
+`DOCKER_HOST`; kind loads them into the cluster through
+`KIND_EXPERIMENTAL_PROVIDER`. If those disagree the build succeeds, the load
+finds nothing, and the cluster tries to pull `typelearn-backend` from Docker Hub.
+The Tiltfile refuses to start on a mismatch rather than let you discover it as an
+`ImagePullBackOff`.
+
+This project uses Docker for now, and pins it in a committed `.envrc`, so a
+shell that prefers Podman does not reach in here:
+
+```bash
+direnv allow    # once after cloning
+```
+
+To switch the project to Podman, replace the two `unset` lines in `.envrc` with:
+
+```bash
+systemctl --user enable --now podman.socket
+export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+export KIND_EXPERIMENTAL_PROVIDER=podman
+# Podman's API doesn't implement Docker's BuildKit gRPC session.
+export DOCKER_BUILDKIT=0
+```
+
+> **Podman needs kind 0.33 or newer.** kind 0.32 cannot drive podman 6 at all:
+> `kind get clusters` fails with a template error, because podman 6 reports
+> container labels as a list where kind expects a map — independent of the
+> exports above. kind 0.33 fixes it. On kind 0.32, either upgrade or use Docker
+> and unset `KIND_EXPERIMENTAL_PROVIDER`.
 
 ### 1. Create the cluster
 
@@ -41,7 +67,7 @@ Both paths differ per machine, so neither is written into the repository.
 
 ```bash
 cp .env.example .env      # the Tiltfile does this for you if you forget
-scripts/tilt-up.sh
+tilt up
 ```
 
 That builds both images, installs what the cluster is missing the first time
@@ -79,13 +105,27 @@ derived from the worktree's directory name:
 
 ```bash
 git worktree add ../TypeLearn-feature -b feat/something
-cd ../TypeLearn-feature && scripts/tilt-up.sh   # e.g. http://localhost:8517
+cd ../TypeLearn-feature && tilt up   # e.g. http://localhost:8517
 ```
 
-`scripts/worktree-env.sh export` prints what a checkout resolves to. The audio is
-deliberately *not* per-worktree: all of them read the one `data/media`, so
-ingestion is done once rather than per checkout. Everything else is isolated —
-an exercise ingested in one worktree is invisible to another.
+`scripts/worktree-env.sh export` prints what a checkout resolves to.
+
+Two things are deliberately *not* per-worktree. The audio: every worktree reads
+the one `data/media`, so ingestion is done once rather than per checkout. And the
+Tilt UI, which stays on **http://localhost:10350** whichever worktree you are in
+— it is the tool you have open rather than something the project serves, so its
+URL should not move. The consequence is that one Tilt runs at a time: bring a
+second worktree up, and the first worktree's *stack* keeps serving on its own
+port in the cluster while its Tilt is not attached. Set `TILT_PORT` if you really
+want two Tilts at once.
+
+Pin a worktree's offset — and so its port and namespace — by copying
+`.envrc.local.example` to `.envrc.local` in it. `.envrc` itself is committed and
+carries the runtime settings every checkout shares; `.envrc.local` is ignored, so
+pinning an offset does not leave your checkout looking modified.
+
+Everything else is isolated — an exercise ingested in one worktree is invisible
+to another.
 
 ### Running commands and tests
 

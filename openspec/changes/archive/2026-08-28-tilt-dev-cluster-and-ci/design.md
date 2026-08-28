@@ -357,10 +357,22 @@ code — which development and CI use, while the production overlay pins
 
 **Files the container creates are owned by a mapped subuid on the host.** The
 spike established that for files; directories behave the same way, and Django
-creates `media/clips/` itself. A developer then cannot delete their own ingested
-clips without root, because deletion needs write permission on the *containing*
-directory. The bring-up's `chmod` is therefore recursive and runs on every
-`tilt up`.
+creates `media/clips/` itself (`upload_to='clips/'`). A developer then cannot
+delete their own ingested clips, because deletion needs write permission on the
+*containing* directory — and that directory belongs to the container's subuid.
+
+The first fix here was wrong and is recorded as such: a recursive `chmod` from
+the bring-up cannot work, because `chmod` requires **ownership**, not write
+permission on the parent. `data/media` being world-writable lets the developer
+unlink the entry; it does not let them change the mode of a directory they do not
+own. The sweep therefore failed with `Operation not permitted` and, exiting
+non-zero, took the whole Tiltfile down with it.
+
+What works is to create the directory before the container can: made by the
+bring-up it is owned by the developer and world-writable, so the container's user
+writes into it happily and the developer can still delete what lands there. The
+lesson generalises — under a rootless runtime, decide who creates a shared
+directory, because whoever creates it owns it.
 
 ## Risks / Trade-offs
 

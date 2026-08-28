@@ -19,6 +19,30 @@
 CALICO_VERSION = "v3.32.1"
 CNPG_CHART = "cnpg/cloudnative-pg"
 
+# --- The container runtime, on both sides ------------------------------------
+# Tilt builds images with whatever DOCKER_HOST points at, and kind loads them
+# into the cluster with whatever KIND_EXPERIMENTAL_PROVIDER names. When those
+# two disagree, the build succeeds, the load quietly finds nothing, and the
+# cluster falls back to pulling `typelearn-backend` from Docker Hub — an
+# ImagePullBackOff that says nothing about the cause. So say it here instead.
+#
+# See the README for the exports each runtime needs.
+_provider = os.getenv("KIND_EXPERIMENTAL_PROVIDER", "docker")
+_docker_host = os.getenv("DOCKER_HOST", "")
+_builder_is_podman = "podman" in _docker_host
+
+if _provider == "podman" and not _builder_is_podman:
+    fail("kind is set to use podman (KIND_EXPERIMENTAL_PROVIDER=podman) but Tilt " +
+         "builds through " + (_docker_host if _docker_host else "the docker daemon") +
+         ", so images would never reach the cluster. Either export DOCKER_HOST to " +
+         "podman's socket, or unset KIND_EXPERIMENTAL_PROVIDER to use docker for both. " +
+         "See the README.")
+
+if _provider != "podman" and _builder_is_podman:
+    fail("Tilt builds through podman (DOCKER_HOST=" + _docker_host + ") but kind is " +
+         "set to use " + _provider + ", so images would never reach the cluster. " +
+         "Export KIND_EXPERIMENTAL_PROVIDER=podman to match. See the README.")
+
 # --- Worktree identity --------------------------------------------------------
 def _wt(field):
     return str(local("./scripts/worktree-env.sh %s" % field, quiet=True, echo_off=True)).strip()
@@ -68,13 +92,21 @@ if _missing("kubectl get crd clusters.postgresql.cnpg.io --ignore-not-found -o n
     local("helm upgrade --install cnpg %s --namespace cnpg-system --create-namespace --wait --timeout 6m" % CNPG_CHART)
 
 # The shared media directory is written by a non-root container. Under a
-# rootless container runtime the container's user maps to an unprivileged subuid
-# that owns nothing on the host, so without this the first ingestion fails with
-# a permission error. Recursive, because the subdirectories Django creates under
-# it (media/clips) are owned by that subuid too: without the sweep a developer
-# cannot delete their own ingested clips without root. Dev-only, on a dev-only
-# directory, and cheap enough to redo on every `tilt up`.
-local("mkdir -p data/media && chmod -R a+rwX data/media", quiet=True)
+# rootless container runtime that container's user maps to an unprivileged subuid
+# which owns nothing on the host, so a directory it creates belongs to that
+# subuid — and `chmod` needs ownership, not write permission on the parent, so
+# the developer cannot chmod it afterwards, cannot delete what is inside it, and
+# a recursive sweep here would simply fail.
+#
+# So create the directory Django writes into *before* the container can: made
+# here it is owned by the developer, and world-writable so the container's user
+# can still write into it. `clips` is where `Exercise.original_audio` lands
+# (`upload_to='clips/'`); if that ever changes, this needs to change with it.
+#
+# `|| true` because a directory an older run already left behind may still be
+# owned by the container's subuid, and failing the whole Tiltfile over a
+# permission bit on a dev-only directory helps nobody.
+local("mkdir -p data/media/clips && chmod 0777 data/media data/media/clips || true", quiet=True)
 
 # --- Images -------------------------------------------------------------------
 # CI builds the images once, loads them into its cluster, and runs `tilt ci` with
@@ -260,9 +292,17 @@ cmd_button(
     text="Ingest the corpus",
     icon_name="library_music",
     requires_confirmation=True,
+    # The Job is applied straight to the cluster, not handed to Tilt, so nothing
+    # rewrites its `image: typelearn-backend` to the tag Tilt actually built —
+    # left alone it resolves to `docker.io/library/typelearn-backend:latest` and
+    # the pod dies in ErrImagePull. Take the image from the running backend
+    # Deployment instead: that ref is guaranteed present in the cluster, and in
+    # CI_PREBUILT mode it is the plain `typelearn-backend` the job already wants.
     argv=["sh", "-c", """
+        set -e
+        IMAGE=$(kubectl get deployment backend -n %s -o jsonpath='{.spec.template.spec.containers[0].image}')
         kubectl delete job ingest -n %s --ignore-not-found
-        sed -e 's/WORKTREE_NAMESPACE/%s/' k8s/ingest-job.yaml | kubectl apply -n %s -f -
+        sed -e "s|image: typelearn-backend$|image: $IMAGE|" k8s/ingest-job.yaml | kubectl apply -n %s -f -
         kubectl wait --for=condition=Ready pod -l job-name=ingest -n %s --timeout=120s || true
         kubectl logs -n %s -f job/ingest
     """ % (NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE)],

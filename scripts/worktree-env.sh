@@ -14,19 +14,21 @@
 #   namespace = "default"                 | "typelearn-<slug>"
 #   offset    = WORKTREE_OFFSET | 0 (for "default") | cksum(slug) % 50 + 1
 #   port      = GATEWAY_PORT    | 8500 + offset
-#   tilt port = TILT_PORT       | 10350 + offset
 #
 # The Gateway is the only host port the application uses — the database is
-# reached from inside the cluster. Tilt's own UI needs one too: it binds 10350
-# by default and refuses to start if that is taken, so a second worktree could
-# not run `tilt up` at all without its own.
+# reached from inside the cluster — and it is the one that moves per worktree, so
+# several stacks can serve at once.
+#
+# Tilt's own UI is deliberately not derived here: it stays on its default 10350
+# for every worktree, because it is the tool you have open rather than something
+# the project serves, and a URL that moved with the checkout would be a bookmark
+# that is wrong most of the time.
 #
 # Usage:
 #   worktree-env.sh slug        # "default" or e.g. "add-session-summary"
 #   worktree-env.sh namespace   # "default" or "typelearn-<slug>"
 #   worktree-env.sh offset      # 0 for the main checkout, else 1..50
 #   worktree-env.sh port        # the Gateway's host port
-#   worktree-env.sh tilt-port   # the Tilt UI's host port
 #   worktree-env.sh export      # WT_SLUG=… WT_NAMESPACE=… … for `eval`
 #   worktree-env.sh sanitize X  # reduce an arbitrary value to a slug label
 set -eu
@@ -86,14 +88,12 @@ OFFSET=$(resolve_offset "$SLUG")
 # The base ends in 00 and the offset stays under 100, so the last two digits of
 # the port name the worktree, and the main checkout gets the bare 8500.
 PORT=${GATEWAY_PORT:-$(( 8500 + OFFSET ))}
-TILT_PORT_VALUE=${TILT_PORT:-$(( 10350 + OFFSET ))}
 
 case "${1:-export}" in
 	slug) printf '%s\n' "$SLUG" ;;
 	namespace) printf '%s\n' "$NAMESPACE" ;;
 	offset) printf '%s\n' "$OFFSET" ;;
 	port) printf '%s\n' "$PORT" ;;
-	tilt-port) printf '%s\n' "$TILT_PORT_VALUE" ;;
-	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s WT_TILT_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" "$TILT_PORT_VALUE" ;;
-	*) echo "usage: $0 {slug|namespace|offset|port|tilt-port|export|sanitize <value>}" >&2; exit 2 ;;
+	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" ;;
+	*) echo "usage: $0 {slug|namespace|offset|port|export|sanitize <value>}" >&2; exit 2 ;;
 esac

@@ -36,3 +36,7 @@ dist-ssr/
 
 # Tilt scratch (generated namespace overlay)
 .tilt/
+
+# direnv: .envrc is committed (it pins the container runtime for everyone);
+# only the per-checkout override is ignored.
+.envrc.local

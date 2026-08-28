@@ -19,6 +19,20 @@ spec:
     initdb:
       database: typelearn
       owner: typelearn
+  # The "Run backend tests" button runs pytest-django, which creates and drops
+  # its own `test_typelearn` database on every run. The bootstrap owner role has
+  # no such privilege by default, so grant it here. CNPG reconciles managed
+  # roles continuously, so this takes effect on a running cluster too, not only
+  # a fresh bootstrap. `passwordSecret` points back at the secret CNPG already
+  # generated for this role, so managing the role does not clear its password.
+  managed:
+    roles:
+      - name: typelearn
+        ensure: present
+        login: true
+        createdb: true
+        passwordSecret:
+          name: postgres-app
   # A development database on one node: no replicas to fail over to, and a
   # restart is cheaper than a resync.
   primaryUpdateStrategy: unsupervised
