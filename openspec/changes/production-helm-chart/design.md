@@ -146,6 +146,58 @@ with it. The chart instead fails clearly when a prerequisite is missing — a
 `required` check on the GatewayClass and the CNPG CRD gives a named error rather
 than resources that never become ready.
 
+## What the Rendered Output Deliberately Changes
+
+The migration plan below diffs the chart's output against the manifests it
+replaces. Everything that survived that reconciliation is listed here, so the
+diff is a decision rather than a surprise.
+
+**Against the development rendering** (`kubectl kustomize` with the Tiltfile's
+substitutions), the chart adds:
+
+- the standard `app.kubernetes.io/*` and `helm.sh/chart` labels on every object.
+  The `app: <component>` selector labels are untouched — a Deployment's selector
+  is immutable, and the Tiltfile's buttons and port-forward select on them;
+- `helm.sh/resource-policy: keep` on the database;
+- a pod-template checksum of the ConfigMap and Secret, so a configuration edit
+  rolls the pods rather than waiting for something else to restart them;
+- `DJANGO_SECRET_KEY` moved out of the ConfigMap into a Secret, and an `envFrom`
+  secretRef alongside the existing configMapRef;
+- explicit image tags (`typelearn-backend:latest`) where the manifests had a bare
+  name that resolved to the same thing;
+- named container ports, so the Service and the probes follow the frontend's mode
+  rather than restating a number that changes with it;
+- a fixed `Host` header on the backend's probes. Django checks Host against
+  ALLOWED_HOSTS and a probe arrives at the pod IP, so without this a deployment
+  needs the `*` that only development should have.
+
+Nothing else differs: same objects, same names, same routing, same volumes.
+
+**Against `k8s/overlays/prod` the diff found four defects**, which is the return
+on doing it rather than reasoning about it. The overlay was never installed, so
+none had been observed:
+
+1. The frontend patch set `env: []` intending to drop the dev server's
+   `VITE_HMR_CLIENT_PORT`. A strategic merge with an empty list is a no-op, so
+   production would have shipped that variable with the literal, unsubstituted
+   value `GATEWAY_PORT`.
+2. The same patch's `ports` merged rather than replaced, leaving the container
+   declaring both 80 and the dev server's 5173.
+3. The overlay replaced only the media *claim*, so the development hostPath
+   PersistentVolume was still rendered — carrying the unsubstituted
+   `WORKTREE_SLUG` and `WORKTREE_NAMESPACE` placeholders into production.
+4. `managed.roles` with `createdb: true` was inherited from the base. That
+   exists so pytest can create its own test database; production has no reason
+   to grant it. It is `postgres.allowCreateDatabase`, false by default.
+
+The overlay also produced no ConfigMap at all — the Tiltfile built that object,
+so `kubectl apply -k k8s/overlays/prod` would have left every pod in
+`CreateContainerConfigError`. The chart renders it.
+
+One intended removal: the overlay restated the backend command as gunicorn with
+three workers, which is exactly the image's own CMD. The chart sets no command
+in a deployment, so there is one place that decides how the application starts.
+
 ## Risks / Trade-offs
 
 - **The migration is a rewrite of a path that currently works** → the manifests
@@ -181,15 +233,48 @@ than resources that never become ready.
 Rollback is reverting the commit; nothing outside the cluster changes, and the
 data lives on volumes the chart is told to keep.
 
-## Open Questions
+## Open Questions, Resolved
 
-- **Whether CI should publish the chart.** Packaging it to GHCR as an OCI
-  artefact alongside the images would make a deployment a `helm install` of a
-  versioned chart rather than a checkout. Worth doing when there is somewhere to
-  deploy; premature before that.
-- **Whether ingestion belongs in the chart.** It is a development affordance
-  today. As a Job template disabled by default it costs little; as a Helm hook it
-  would run on every upgrade, which is wrong. Leaning toward a plain Job template,
-  off by default.
-- **Whether the chart should carry a `NOTES.txt` that prints the URL.** Useful
-  locally, noise in a pipeline.
+- **Whether CI should publish the chart as an OCI artefact.** No, for now. It
+  would make a deployment a `helm install` of a versioned chart rather than a
+  checkout, which is the right end state — but there is nowhere to deploy, so it
+  would be publishing versions nobody installs. CI renders every branch of the
+  chart on every change instead, which is the part that catches mistakes. Revisit
+  when a target cluster exists.
+- **Whether ingestion belongs in the chart.** Yes, as a plain Job template
+  disabled by default — not a Helm hook, which would run on every upgrade and is
+  exactly when nobody asked for it. It is the only definition of that Job now:
+  the Tiltfile's button renders it from the chart rather than keeping a second
+  copy, and `k8s/ingest-job.yaml` is gone.
+- **Whether the chart should carry a `NOTES.txt`.** No. It would print a URL that
+  is right only when a hostname is set and a load balancer has assigned an
+  address — neither true locally — and it is noise in a pipeline.
+
+## Discovered While Building
+
+- **The backend had no health endpoint, and `/graphql/` cannot be one.** A GET
+  there serves GraphiQL, which is registered only when `DEBUG` is on, so the
+  probe the development manifests used passes locally and fails in exactly the
+  environment where a failing probe means the pod never becomes ready — as it
+  did, on the first real install. A trivial `/healthz/` was added and the probe
+  path became `backend.probePath`.
+- **Live update into the backend was broken by a root-owned `/app`.** `WORKDIR`
+  creates the directory as root and `COPY --chown` only sets ownership of what
+  lands in it, so the non-root user could not write there. Tilt's sync extracts a
+  tar, which needs write permission on the directory, so every synced backend
+  edit failed and the pod kept serving the image's code. The image now chowns
+  `/app`.
+- **Generating a file into `.tilt/` and then rendering from it is a reload
+  loop.** `helm(values=[...])` watches the values files it is handed, and the
+  Tiltfile rewrites them on every execution, so the write triggers the reload
+  that performs the write. The old kustomize path had the same shape — generate
+  `.tilt/overlay/kustomization.yaml`, then `kustomize(".tilt/overlay")` — so this
+  is likely long-standing rather than new. `.tiltignore` now excludes `.tilt/`:
+  everything in it is derived, and the sources it derives from are watched
+  already. An edit to `.env` still triggers exactly one reload.
+- **Django serves nothing at `/media/` when `DEBUG` is off**, because the
+  `static()` helper that serves ingested clips is inside a `if settings.DEBUG`.
+  The HTTPRoute sends `/media` to the backend in every environment, so a
+  deployment would 404 on every audio clip. Not fixed here: choosing how a
+  deployment serves media is a decision of its own, and this change is about
+  parameterising the deployment rather than designing it.

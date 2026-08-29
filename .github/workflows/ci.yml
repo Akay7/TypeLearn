@@ -33,6 +33,63 @@ jobs:
           echo "frontend_image=ghcr.io/${REPO}/typelearn-frontend" >> "$GITHUB_OUTPUT"
           echo "candidate_tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+  # A template that does not render is a deployment that fails after the images
+  # are built, the cluster is up, and someone is waiting. This runs first and
+  # needs nothing: no images, no cluster, no registry.
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # prerequisiteChecks off for lint alone: lint renders without a cluster and
+      # cannot be told what one has, so the checks would report a missing
+      # operator that the render steps below supply properly.
+      - name: Lint
+        run: helm lint chart --strict --set prerequisiteChecks=false
+      # `helm template` offline sees only Kubernetes' built-in APIs, so the
+      # chart's prerequisite checks are told what the target cluster has.
+      # Rendering every branch the chart claims to support is the point: a
+      # conditional nobody renders is a conditional nobody has tested.
+      - name: Render every branch the chart offers
+        env:
+          API: --api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1
+        run: |
+          set -e
+          echo "defaults — a deployment that supplied nothing"
+          helm template typelearn chart $API > /dev/null
+          echo "the documented production starting point"
+          helm template typelearn chart $API --values chart/values-prod.yaml.example > /dev/null
+          echo "development, as Tilt renders it"
+          helm template typelearn chart $API --namespace typelearn-ci \
+            --set frontend.mode=dev --set frontend.hmrClientPort=8500 \
+            --set media.hostPath=/media --set worktree.slug=ci \
+            --set postgres.allowCreateDatabase=true > /dev/null
+          echo "an external database"
+          helm template typelearn chart $API --set postgres.enabled=false \
+            --set externalDatabase.host=db.example.com \
+            --set externalDatabase.existingSecret=db-password > /dev/null
+          echo "ingestion"
+          helm template typelearn chart $API \
+            --set ingest.enabled=true --set ingest.corpusHostPath=/corpus > /dev/null
+      # The requirement is "secrets are not configuration". Asserted here rather
+      # than trusted, because the failure is silent: a secret in a ConfigMap
+      # works perfectly and is readable by anyone who can read the namespace.
+      - name: A secret must never reach a ConfigMap
+        env:
+          API: --api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1
+        run: |
+          set -e
+          helm template typelearn chart $API --set secrets.DJANGO_SECRET_KEY=canary-value \
+            --show-only templates/configmap.yaml | grep -q canary-value \
+            && { echo "FAIL: a secret rendered into the ConfigMap"; exit 1; } || true
+          helm template typelearn chart $API --set secrets.DJANGO_SECRET_KEY=canary-value \
+            --show-only templates/secret.yaml | grep -q canary-value \
+            || { echo "FAIL: the secret did not render into the Secret"; exit 1; }
+          echo "existingSecret must make the chart create none of its own"
+          helm template typelearn chart $API --set existingSecret=supplied-elsewhere \
+            --set secrets.DJANGO_SECRET_KEY=canary-value \
+            | grep -q "^kind: Secret" \
+            && { echo "FAIL: a Secret was rendered despite existingSecret"; exit 1; } || true
+
   build-backend:
     runs-on: ubuntu-latest
     needs: [setup]
@@ -218,7 +275,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create the cluster
         run: |
-          go install sigs.k8s.io/kind@v0.32.0 || curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.32.0/kind-linux-amd64
+          go install sigs.k8s.io/kind@v0.33.0 || curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
           sudo chmod +x /usr/local/bin/kind 2>/dev/null || true
           kind create cluster --config "$(scripts/kind-config.sh --write)"
       # CI_PREBUILT makes the Tiltfile skip building and deploy what the cluster
@@ -259,7 +316,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [setup, pytest, vitest, playwright, smoke]
+    needs: [setup, chart, pytest, vitest, playwright, smoke]
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read

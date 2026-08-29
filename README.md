@@ -71,8 +71,9 @@ tilt up
 ```
 
 That builds both images, installs what the cluster is missing the first time
-(Calico for the CNI and the Gateway API, CloudNativePG for PostgreSQL), applies
-the manifests, and serves the app at **http://localhost:8500**. Editing backend
+(Calico for the CNI and the Gateway API, CloudNativePG for PostgreSQL), renders
+[`chart/`](chart/) with values generated from `.env`, and serves the app at
+**http://localhost:8500**. Editing backend
 Python or frontend source reaches the running pods without a rebuild.
 
 The first run takes a few minutes, mostly waiting for Calico. Later runs skip the
@@ -140,6 +141,12 @@ npm run test              # vitest, over the pure logic in src/lib/ and the stor
 npm run test:e2e          # playwright, driving Chromium against its own dev server
 ```
 
+Nothing on the host needs the backend's dependencies — it runs in the cluster. If
+you want them anyway, for an editor's autocomplete or to step through a test in a
+debugger, `uv sync` in `src/backend` builds the venv `.vscode/` expects. Running a
+test there also needs a database, which the cluster does not expose; `.vscode/launch.json`
+documents the port-forward.
+
 The e2e suite needs no backend and no cluster: it stubs the GraphQL catalog and
 synthesises its own audio clip. The first run downloads Chromium —
 `npx playwright install chromium`.
@@ -166,6 +173,95 @@ length, and a verdict is drawn into space already reserved for it so the keyboar
 never moves under your fingers. Those four are the ones `npm run test:e2e` exists
 for — a font being loaded, a clip playing, and two elements staying put are claims
 only a browser can settle.
+
+## Installing it somewhere
+
+The stack is one Helm chart in [`chart/`](chart/), and it is not a second
+description of the manifests — it *is* the manifests. `tilt up` renders the same
+chart with development values, so a template that works locally is a template a
+deployment installs.
+
+### What the cluster must already have
+
+The chart installs the application and nothing cluster-scoped. Those are shared
+by every release, so a chart that installed them would fight any other chart that
+did, and uninstalling one application would take the cluster's networking with
+it. Before installing, a cluster needs:
+
+- **a Gateway API implementation** providing the GatewayClass named in
+  `gateway.className` (locally, Calico's `tigera-gateway-class`);
+- **the CloudNativePG operator**, unless `postgres.enabled: false`.
+
+The chart checks for both and fails by name rather than leaving resources that
+never become ready.
+
+### Installing
+
+```bash
+cp chart/values-prod.yaml.example my-values.yaml   # then edit it
+helm install typelearn ./chart \
+  --namespace typelearn --create-namespace \
+  --values my-values.yaml
+```
+
+What a deployment actually has to decide is image tags, a hostname, storage
+classes and sizes, and where its secret comes from. Everything else already
+defaults to the deployment-shaped answer: debug off, the frontend serving the
+built bundle, and no development affordance switched on.
+
+### Configuration and secrets
+
+Every backend environment variable is settable from values, so adding a setting
+never means editing a template:
+
+```yaml
+env:
+  DJANGO_DEBUG: "false"
+  ANY_NEW_SETTING: "value"
+```
+
+Secrets are a different map, and which one you use matters:
+
+| | Use it when | What it does |
+|---|---|---|
+| `secrets:` | A throwaway environment | Renders a Secret from the values. The value is then in the release — anyone who can run `helm get values` can read it |
+| `existingSecret:` | Anything that matters | Names a Secret the chart neither creates nor copies. Its keys become the backend's environment |
+
+```bash
+kubectl create secret generic typelearn-secrets \
+  --from-literal=DJANGO_SECRET_KEY="$(openssl rand -base64 48)"
+helm install typelearn ./chart --set existingSecret=typelearn-secrets ...
+```
+
+The database's own credentials are in neither. CloudNativePG generates them and
+the backend reads five keys straight out of that Secret, so they appear in no
+values file and no template.
+
+### The database
+
+`postgres.enabled: true` provisions one through CloudNativePG, sized and classed
+from values. It carries `helm.sh/resource-policy: keep`, so `helm uninstall`
+removes the workloads and leaves the data — recovering from a stray Cluster is
+one `kubectl delete`, and recovering from a deleted database is not.
+
+`postgres.enabled: false` creates none and points the backend at
+`externalDatabase` instead, so a managed Postgres is a values change rather than
+a fork of the chart.
+
+### Rendering before installing
+
+The chart renders without a cluster, which is what makes it reviewable:
+
+```bash
+helm template typelearn ./chart --values my-values.yaml \
+  --api-versions gateway.networking.k8s.io/v1 \
+  --api-versions postgresql.cnpg.io/v1
+```
+
+The `--api-versions` flags stand in for the cluster's own: rendering offline
+otherwise trips the prerequisite checks above. CI renders every branch the chart
+offers on every change, so a template that does not render fails before anything
+is built.
 
 ## Working on this project
 

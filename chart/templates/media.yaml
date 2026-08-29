@@ -1,0 +1,73 @@
+# Where the ingested clips live. Two branches, both real code.
+{{- if .Values.media.hostPath }}
+# Development: one directory on the node, shared by every worktree.
+#
+# Kubernetes will not let two namespaces bind one PersistentVolume — binding is
+# one-to-one and exclusive, and ReadWriteMany means many *pods*, not many
+# namespaces. So each release gets its OWN PV object and they all point at the
+# same node path. The sharing happens below Kubernetes, in the directory.
+#
+# The name carries the worktree slug because PVs are cluster-scoped, and
+# claimRef is pre-set so one worktree cannot bind another's PV by racing it to
+# the claim.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-{{ .Values.worktree.slug }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.media.size }}
+  accessModes:
+    {{- toYaml .Values.media.accessModes | nindent 4 }}
+  # Retain, not Delete: uninstalling one worktree's release must not take the
+  # clips away from every other worktree, nor from the host.
+  persistentVolumeReclaimPolicy: Retain
+  # Empty, not unset: an unset class would send this to the default provisioner
+  # and dynamically provision an unshared volume instead of binding this one.
+  storageClassName: ""
+  hostPath:
+    path: {{ .Values.media.hostPath }}
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: media
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.media.accessModes | nindent 4 }}
+  storageClassName: ""
+  volumeName: media-{{ .Values.worktree.slug }}
+  resources:
+    requests:
+      storage: {{ .Values.media.size }}
+{{- else }}
+# A deployment: ordinary provisioned storage. No volumeName and no pre-binding —
+# the cluster's provisioner makes the volume.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.media.accessModes | nindent 4 }}
+  {{- with .Values.media.storageClass }}
+  # Named explicitly. Omitted entirely when empty, which means the cluster's
+  # default class — note that is different from "", which would mean no class at
+  # all and would leave this claim waiting for a volume nobody creates.
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.media.size }}
+{{- end }}

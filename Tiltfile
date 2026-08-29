@@ -150,46 +150,86 @@ if not CI_PREBUILT:
     )
 
 # --- Configuration ------------------------------------------------------------
-# One .env, read by the cluster through this ConfigMap and by any management
-# command run on the host. A new checkout gets a working one by copying the
-# example, which carries no secret.
+# One .env, read by the cluster and by any management command run on the host. A
+# new checkout gets a working one by copying the example, which carries no
+# secret. The chart's values are generated from it below rather than written by
+# hand, so .env stays the single file a developer edits.
 if not os.path.exists(".env"):
     local("cp .env.example .env")
 
-def env_configmap(name, path):
-    """A ConfigMap from a dotenv file, without pulling in an extension.
+# A setting whose name ends one of these ways is a secret: it goes into the
+# chart's `secrets` map, and so into a Secret, never into the ConfigMap. A suffix
+# rule rather than a hand-kept list, so a setting added tomorrow is classified
+# the moment it is named.
+SECRET_SUFFIXES = ["_SECRET_KEY", "_PASSWORD", "_TOKEN", "_SECRET"]
 
-    The namespace is set explicitly. This object is built here rather than
-    passed through the kustomize overlay, so nothing else would put it in the
-    worktree's namespace — and a backend in `typelearn-<slug>` looking for a
-    ConfigMap that landed in `default` fails with CreateContainerConfigError.
-    """
-    data = {}
+def read_dotenv(path):
+    """Split a dotenv file into (configuration, secrets)."""
+    env = {}
+    secrets = {}
     for line in str(read_file(path)).split("\n"):
         line = line.strip()
         if line == "" or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        data[key.strip()] = value.strip()
-    return encode_yaml({
-        "apiVersion": "v1",
-        "kind": "ConfigMap",
-        "metadata": {"name": name, "namespace": NAMESPACE},
-        "data": data,
-    })
+        key = key.strip()
+        is_secret = False
+        for suffix in SECRET_SUFFIXES:
+            if key.endswith(suffix):
+                is_secret = True
+        if is_secret:
+            secrets[key] = value.strip()
+        else:
+            env[key] = value.strip()
+    return env, secrets
+
+ENV, SECRETS = read_dotenv(".env")
 
 # --- The stack ----------------------------------------------------------------
-# The namespace is applied through a generated kustomize overlay rather than a
-# Tilt extension, so bringing the stack up needs nothing fetched from the network.
+# One chart, rendered here with development values and by a deployment with its
+# own. The templates a developer exercises every day are the templates a
+# deployment installs — which is the property this whole arrangement exists for.
+#
+# Note what is no longer here: the three placeholders the kustomize output used
+# to have rewritten into it by string replacement. They are values now, so the
+# class of bug where a renderer stripped the quotes from a port and Kubernetes
+# rejected a number is not fixed but impossible.
+DEV_VALUES = {
+    # Tilt rewrites these refs to the images it just built. The tags matter only
+    # in CI_PREBUILT mode, where Tilt rewrites nothing and the cluster must
+    # already hold exactly these names.
+    "image": {
+        "backend": {"repository": "typelearn-backend", "tag": "latest"},
+        "frontend": {"repository": "typelearn-frontend", "tag": "latest"},
+    },
+    "backend": {
+        # --reload so Tilt's synced source takes effect without a pod restart.
+        # A deployment sets no command and gets the image's own.
+        "command": ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--reload"],
+    },
+    # The dev server, and the port the browser really reaches the Gateway on so
+    # Vite's HMR websocket connects.
+    "frontend": {"mode": "dev", "hmrClientPort": str(PORT)},
+    # pytest-django creates and drops its own test database on every run.
+    "postgres": {"allowCreateDatabase": True},
+    # The node path kind mounts the host's media directory onto, shared by every
+    # worktree so the corpus is ingested once rather than per checkout.
+    "media": {"hostPath": "/media"},
+    "worktree": {"slug": SLUG},
+    # The bootstrap above installs every prerequisite and waits for it, so the
+    # chart's check has nothing left to catch here — and `helm template`, which
+    # is what Tilt runs, cannot see the cluster's APIs to satisfy it anyway.
+    "prerequisiteChecks": False,
+    "env": ENV,
+    "secrets": SECRETS,
+}
+
+# The chart is the stack; k8s/ is what the cluster needs before the stack, and a
+# version bump in either should reload this file.
+watch_file("chart")
 watch_file("k8s")
-local("mkdir -p .tilt/overlay", quiet=True)
-local("""cat > .tilt/overlay/kustomization.yaml <<'EOF'
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: %s
-resources:
-  - ../../k8s/base
-EOF""" % NAMESPACE, quiet=True)
+local("mkdir -p .tilt", quiet=True)
+local("cat > .tilt/values-dev.yaml <<'TILT_VALUES_EOF'\n%s\nTILT_VALUES_EOF" % str(encode_yaml(DEV_VALUES)), quiet=True)
 
 if NAMESPACE != "default":
     k8s_yaml(encode_yaml({
@@ -198,13 +238,7 @@ if NAMESPACE != "default":
         "metadata": {"name": NAMESPACE},
     }))
 
-# The manifests carry placeholders for the three values only this worktree knows.
-manifests = str(kustomize(".tilt/overlay"))
-manifests = manifests.replace("WORKTREE_NAMESPACE", NAMESPACE)
-manifests = manifests.replace("WORKTREE_SLUG", SLUG)
-manifests = manifests.replace("GATEWAY_PORT", '"%d"' % PORT)
-k8s_yaml(blob(manifests))
-k8s_yaml(env_configmap("backend-env", ".env"))
+k8s_yaml(helm("chart", name="typelearn", namespace=NAMESPACE, values=[".tilt/values-dev.yaml"]))
 
 # --- Resources ----------------------------------------------------------------
 k8s_resource(
@@ -212,9 +246,15 @@ k8s_resource(
     objects=["postgres:cluster"],
     labels=["data"],
 )
+# The Secret is listed only when .env actually holds one: naming an object the
+# chart did not render fails the Tiltfile rather than being ignored.
+BACKEND_OBJECTS = ["backend-env:configmap", "media-%s:persistentvolume" % SLUG, "media:persistentvolumeclaim"]
+if SECRETS:
+    BACKEND_OBJECTS.append("backend-secrets:secret")
+
 k8s_resource(
     "backend",
-    objects=["backend-env:configmap", "media-%s:persistentvolume" % SLUG, "media:persistentvolumeclaim"],
+    objects=BACKEND_OBJECTS,
     resource_deps=["postgres"],
     labels=["app"],
 )
@@ -292,18 +332,34 @@ cmd_button(
     text="Ingest the corpus",
     icon_name="library_music",
     requires_confirmation=True,
-    # The Job is applied straight to the cluster, not handed to Tilt, so nothing
-    # rewrites its `image: typelearn-backend` to the tag Tilt actually built —
-    # left alone it resolves to `docker.io/library/typelearn-backend:latest` and
-    # the pod dies in ErrImagePull. Take the image from the running backend
-    # Deployment instead: that ref is guaranteed present in the cluster, and in
-    # CI_PREBUILT mode it is the plain `typelearn-backend` the job already wants.
+    # Rendered from the same chart as everything else — one description of the
+    # Job, not a second copy that drifts. It is applied straight to the cluster
+    # rather than handed to Tilt or to Helm: Tilt would treat it as part of the
+    # stack and re-run it on every change, and a Job's spec is immutable, so a
+    # `helm upgrade` carrying one fails the moment it already exists.
+    #
+    # The image comes from the running Deployment, because that ref is
+    # guaranteed present in the cluster: Tilt has already rewritten it to the tag
+    # it built, and in CI_PREBUILT mode it is whatever CI loaded.
+    # Built with .replace() rather than %-formatting: the script needs shell
+    # parameter expansions like ${IMAGE%%:*}, and Starlark's % operator would eat
+    # them on the way through.
     argv=["sh", "-c", """
         set -e
-        IMAGE=$(kubectl get deployment backend -n %s -o jsonpath='{.spec.template.spec.containers[0].image}')
-        kubectl delete job ingest -n %s --ignore-not-found
-        sed -e "s|image: typelearn-backend$|image: $IMAGE|" k8s/ingest-job.yaml | kubectl apply -n %s -f -
-        kubectl wait --for=condition=Ready pod -l job-name=ingest -n %s --timeout=120s || true
-        kubectl logs -n %s -f job/ingest
-    """ % (NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE, NAMESPACE)],
+        IMAGE=$(kubectl get deployment backend -n NS -o jsonpath='{.spec.template.spec.containers[0].image}')
+        case "$IMAGE" in
+          *:*) REPO="${IMAGE%%:*}"; TAG="${IMAGE##*:}" ;;
+          *)   REPO="$IMAGE";       TAG="latest" ;;
+        esac
+        kubectl delete job ingest -n NS --ignore-not-found
+        helm template typelearn chart --namespace NS \
+          --values .tilt/values-dev.yaml \
+          --set ingest.enabled=true \
+          --set ingest.corpusHostPath=/corpus \
+          --set-string image.backend.repository="$REPO" \
+          --set-string image.backend.tag="$TAG" \
+          --show-only templates/ingest-job.yaml | kubectl apply -n NS -f -
+        kubectl wait --for=condition=Ready pod -l job-name=ingest -n NS --timeout=120s || true
+        kubectl logs -n NS -f job/ingest
+    """.replace("NS", NAMESPACE)],
 )

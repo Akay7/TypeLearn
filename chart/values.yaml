@@ -1,0 +1,187 @@
+# TypeLearn's values, documented where they are set rather than in a table that
+# drifts away from them.
+#
+# These defaults are deployment-shaped: debug off, the frontend serving a built
+# bundle, no development-only affordance switched on, and no secret written
+# down. `helm install typelearn ./chart` with nothing else produces something a
+# deployment would recognise — it needs a hostname and image tags, not a rewrite.
+#
+# Development does not hand-write an override of this file: the Tiltfile
+# generates its values from `.env`, so `.env` stays the single file a developer
+# edits. See values-prod.yaml.example for a deployment's starting point.
+
+# --- Images -------------------------------------------------------------------
+image:
+  pullPolicy: IfNotPresent
+  # Names of image pull secrets, for a private registry.
+  pullSecrets: []
+  backend:
+    repository: typelearn-backend
+    # Empty means the chart's appVersion, so an install without explicit tags is
+    # still pinned to a version rather than floating on `latest`.
+    tag: ""
+  frontend:
+    repository: typelearn-frontend
+    tag: ""
+
+# --- Backend ------------------------------------------------------------------
+backend:
+  replicas: 1
+  # Empty means the image's own CMD — gunicorn with three workers. Development
+  # overrides this to add --reload so synced source takes effect without a
+  # restart; a deployment has no reason to set it.
+  command: []
+  resources: {}
+  # Migrations run as an initContainer, before the application serves, rather
+  # than from inside it. The container retries: a database still bootstrapping is
+  # the expected state at first start, not a failure.
+  migrate:
+    enabled: true
+    retries: 60
+    retryDelaySeconds: 3
+  # Probes send a fixed Host header so they pass whatever the pod's IP is —
+  # Django checks Host against ALLOWED_HOSTS, and a probe to a pod IP would
+  # otherwise need that IP listed, or the wildcard that no deployment should set.
+  probeHost: localhost
+  # A GET of /graphql/ serves GraphiQL, which exists only when DEBUG is on, so
+  # probing there passes in development and fails everywhere else. This endpoint
+  # answers in both.
+  probePath: /healthz/
+
+# --- Frontend -----------------------------------------------------------------
+frontend:
+  # serve — the built bundle behind nginx, which is what a deployment runs.
+  # dev   — the Vite dev server, so hot reload survives the move into a cluster.
+  # Both branches are this same template; neither is a comment describing the
+  # other.
+  mode: serve
+  replicas: 1
+  resources: {}
+  # dev mode only: Vite's HMR websocket is opened by the browser, which arrives
+  # through the Gateway, so the client must be told the port it really connects
+  # on rather than the one the server listens on. The Tiltfile sets this.
+  hmrClientPort: ""
+
+# --- Routing ------------------------------------------------------------------
+# One origin for the SPA, the GraphQL endpoint, and the audio. That is what makes
+# CORS unnecessary, so the backend carries none.
+gateway:
+  enabled: true
+  # Provisioned by Calico's operator once Gateway API support is enabled.
+  className: tigera-gateway-class
+  # Set it, and the listener and the route both match that hostname. Left empty
+  # the Gateway serves every host, which is what development wants.
+  host: ""
+  tls:
+    # Name of a Secret holding tls.crt and tls.key. Set it, and the Gateway gains
+    # an HTTPS listener; it needs `host` set too, since a certificate is for a
+    # name. No issuer is configured here — bring your own Secret.
+    secretName: ""
+  # Paths that belong to Django rather than to the SPA. Everything else falls
+  # through to the frontend.
+  backendPaths:
+    - /graphql
+    - /media
+    - /admin
+    - /static
+
+# --- Backend configuration ----------------------------------------------------
+# Every entry becomes one key in the backend's ConfigMap, so a new backend
+# setting is an entry here and never a template edit.
+env:
+  DJANGO_DEBUG: "false"
+  # Extended automatically with gateway.host when that is set, so the common
+  # case needs nothing here.
+  DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+  # Where ingested clips live in the container; the media volume mounts here.
+  MEDIA_ROOT: /app/media
+  CORPUS_PATH: /corpus
+
+# Secret values, rendered into a Secret and never into the ConfigMap. Anything
+# put here is readable by anyone who can read the release, so prefer
+# existingSecret below for anything that actually matters.
+secrets: {}
+#  DJANGO_SECRET_KEY: "..."
+
+# Name a Secret the chart does not create and does not copy — the answer for a
+# cluster whose secrets are owned by an operator. When set, `secrets` above is
+# ignored and no Secret is rendered.
+existingSecret: ""
+
+# --- Database -----------------------------------------------------------------
+postgres:
+  # false renders no database at all and points the backend at externalDatabase,
+  # so a managed Postgres is a values change rather than a fork of this chart.
+  enabled: true
+  instances: 1
+  # Pinned to 17 to match the project's specs. CNPG's own default is newer;
+  # moving is a decision with its own reasons.
+  image: ghcr.io/cloudnative-pg/postgresql:17
+  database: typelearn
+  owner: typelearn
+  storage:
+    size: 1Gi
+    # Empty uses the cluster's default StorageClass.
+    storageClass: ""
+  resources: {}
+  # unsupervised: a restart rather than a failover. Right for a single instance;
+  # reconsider alongside instances > 1.
+  primaryUpdateStrategy: unsupervised
+  # Lets the application's role create databases. pytest-django needs it (it
+  # creates and drops test_typelearn on every run) and a deployment does not —
+  # which is exactly why it is off here and on in development.
+  allowCreateDatabase: false
+
+# Used only when postgres.enabled is false.
+externalDatabase:
+  host: ""
+  port: 5432
+  database: typelearn
+  user: typelearn
+  # A Secret holding the password. Required — the password is never a value.
+  existingSecret: ""
+  passwordKey: password
+
+# --- Media --------------------------------------------------------------------
+# Where ingested clips live. Two branches, both implemented:
+media:
+  size: 8Gi
+  accessModes:
+    - ReadWriteMany
+  # Empty uses the cluster's default StorageClass. Ignored when hostPath is set.
+  storageClass: ""
+  # Development only. A directory on the node, shared by every worktree so the
+  # gigabyte-scale corpus is ingested once rather than per checkout. Set, and the
+  # chart renders a static PV pre-bound to this release's claim; unset, and it
+  # renders an ordinary claim against storageClass above.
+  hostPath: ""
+
+# --- Worktree identity --------------------------------------------------------
+# Development only, and the reason it is a value: PersistentVolumes are
+# cluster-scoped, so each worktree needs its own PV object pointing at the same
+# directory, and the name has to carry something unique. The Tiltfile supplies
+# this.
+worktree:
+  slug: default
+
+# --- Ingestion ----------------------------------------------------------------
+# Reads a Common Voice release in place and copies the selected clips into the
+# media volume. Minutes long and only needed when the catalog is empty, so it is
+# off by default — and a plain Job rather than a Helm hook, so an upgrade never
+# starts one.
+ingest:
+  enabled: false
+  # The release directory as the pod sees it. In development kind mounts the
+  # host's corpus here; set corpusHostPath to mount it from the node.
+  corpusHostPath: ""
+
+# --- Prerequisite checks ------------------------------------------------------
+# The chart depends on controllers it refuses to install. When true it fails
+# rendering with a named error if their APIs are absent, rather than leaving
+# resources that never become ready.
+#
+# `helm install` sees the real cluster's APIs. `helm template` without a cluster
+# sees only Kubernetes' built-ins, so rendering offline needs either
+# `--api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1`
+# or this set to false.
+prerequisiteChecks: true

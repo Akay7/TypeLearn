@@ -1,0 +1,8 @@
+# Tilt's own scratch directory. The Tiltfile generates the chart's development
+# values into it on every execution, and `helm(values=[...])` watches the files
+# it is given — so without this the write triggers a reload that performs the
+# write again, several times a second, forever.
+#
+# Nothing is lost by ignoring it: everything in here is derived, and the sources
+# it is derived from (.env, the Tiltfile, chart/, k8s/) are watched already.
+.tilt/
