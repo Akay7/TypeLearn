@@ -1,18 +1,22 @@
 {
-  // Tests run from the Testing view, so there is no pytest entry in launch.json:
-  // the view's "Debug Test" already attaches the debugger to a single test.
+  // The backend runs in the cluster, so the tests that matter run there too —
+  // the Tilt UI's "Run backend tests" button executes pytest in the pod, against
+  // the real PostgreSQL, which is what CI does as well.
+  //
+  // This block configures the Testing view for the *host* interpreter, which is
+  // useful for collection, navigation, and debugging a single test. Running one
+  // needs a database: port-forward the cluster's, in a terminal, and the same
+  // POSTGRES_* below will reach it.
+  //
+  //   kubectl port-forward svc/postgres-rw 5432:5432
+  //   kubectl get secret postgres-app -o jsonpath='{.data.password}' | base64 -d
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   // pytest's config lives in src/backend/pyproject.toml, so discovery has to
   // start there rather than at the repo root.
   "python.testing.cwd": "${workspaceFolder}/src/backend",
   "python.testing.pytestArgs": [],
-  // The suite talks to PostgreSQL, so the test runner needs the same POSTGRES_*
-  // variables the container reads. Without this the Testing view collects the
-  // tests and then fails every one of them on connect.
-  "python.envFile": "${workspaceFolder}/db.env",
-  // Only a default: it applies until an interpreter is picked explicitly, and
-  // `uv sync` puts one here. A Poetry env is chosen with "Python: Select
-  // Interpreter" instead.
+  // `uv sync` in src/backend puts an interpreter here, and VS Code finds it on
+  // its own; this is only the default until one is picked explicitly.
   "python.defaultInterpreterPath": "${workspaceFolder}/src/backend/.venv/bin/python"
 }

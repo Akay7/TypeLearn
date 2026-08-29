@@ -7,17 +7,14 @@
 #
 #   kind create cluster --config "$(scripts/kind-config.sh --write)"
 #
-# kind talks to a container runtime through KIND_EXPERIMENTAL_PROVIDER. It is
-# forced to docker below: kind 0.32 cannot drive podman 6, whose `ps --format`
-# reports .Labels as a slice, so `kind get clusters` fails with a template error
-# and nothing that scripts against kind can work.
-#
 #   TYPELEARN_CORPUS_DIR   the Common Voice release directory. Optional — when
 #                          unset the media directory is mounted in its place,
 #                          because a kind mount needs a path that exists.
+# The container runtime is not set here. This script only prints YAML — the
+# caller runs `kind create cluster`, so an export made here would die with this
+# subshell and settle nothing. `.envrc` pins the runtime for the whole project,
+# which is the one place that actually reaches both kind and Tilt.
 set -eu
-
-export KIND_EXPERIMENTAL_PROVIDER=docker
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 MEDIA_DIR="${TYPELEARN_MEDIA_DIR:-$ROOT/data/media}"
