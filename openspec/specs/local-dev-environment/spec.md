@@ -1,13 +1,19 @@
 # local-dev-environment Specification
 
 ## Purpose
-TBD - created by archiving change align-specs-with-reality. Update Purpose after archive.
+How a developer runs the whole application on their own machine: on a local
+Kubernetes cluster shaped like a deployment, so that what works here works there,
+and so several checkouts of this repository can run at once without colliding.
 ## Requirements
 ### Requirement: The stack runs on a local Kubernetes cluster
 Local development SHALL run the whole application — database, backend, and
 frontend — on a local `kind` cluster driven by Tilt, rather than a mixture of one
 container and two host processes. A single command SHALL bring the stack up, and
 a developer SHALL NOT have to start the backend or the frontend by hand.
+
+The images SHALL be built into the same container runtime that hosts the cluster,
+and the project SHALL pin that runtime rather than inherit whichever one the
+developer's shell happens to name.
 
 #### Scenario: Starting the stack
 - **WHEN** a developer runs `tilt up` in a checkout
@@ -31,6 +37,19 @@ a developer SHALL NOT have to start the backend or the frontend by hand.
 - **WHEN** the backend pod is deleted and rescheduled
 - **THEN** the audio clips under `MEDIA_ROOT` are still present, because the
   directory is a persistent volume rather than container-local storage
+
+#### Scenario: The runtime is pinned by the checkout
+- **WHEN** a developer whose shell prefers a different container runtime works in
+  this checkout
+- **THEN** the project's own environment settles which runtime is used, so the
+  stack comes up without the developer editing anything, or having to know the
+  choice was made
+
+#### Scenario: A split runtime is refused rather than tolerated
+- **WHEN** the runtime the images are built into and the runtime hosting the
+  cluster would differ
+- **THEN** bring-up stops immediately and names both sides, rather than building
+  successfully and surfacing much later as an image the cluster cannot pull
 
 ### Requirement: The application is served from one origin
 The frontend and the backend SHALL be reached through a single origin in local
@@ -86,6 +105,14 @@ ingesting again.
 - **THEN** it is reused rather than recreated, and the clips already on it are
   left untouched
 
+#### Scenario: The directory is prepared before the container can create it
+- **WHEN** the stack is brought up on a machine where the clips directory does
+  not exist yet
+- **THEN** it is created by the host side, owned by the developer and writable by
+  the container's user — never left for the container to create first, which
+  under a rootless runtime would leave a directory the developer can afterwards
+  neither change nor clear
+
 #### Scenario: Clips outlive the cluster
 - **WHEN** the cluster is deleted and created again
 - **THEN** the previously ingested clips are still there, because the store is
@@ -100,8 +127,8 @@ ingesting again.
 Several git worktrees of this repository SHALL be able to run their stacks at the
 same time against one cluster, without any of them being edited to avoid a
 collision. Each worktree's identity SHALL be derived automatically, and SHALL
-determine both the Kubernetes namespace it deploys into and the host port it is
-reached on.
+determine both the Kubernetes namespace it deploys into and the host port the
+application is reached on.
 
 #### Scenario: The main checkout is unchanged
 - **WHEN** `tilt up` runs in the main checkout
@@ -125,6 +152,12 @@ reached on.
   database is reachable only from inside the cluster — every management command
   runs in a pod rather than against a forwarded port
 
+#### Scenario: The tool's own UI does not move
+- **WHEN** several worktrees are running at once
+- **THEN** Tilt's UI is reached at one unchanging address for all of them and
+  only the application's port varies, because the UI is the tool the developer
+  keeps open rather than something the project serves
+
 #### Scenario: One definition of the mapping
 - **WHEN** the namespace or port for a worktree is needed by Tilt or by any
   editor task or script
@@ -136,6 +169,11 @@ reached on.
   environment
 - **THEN** that value is used instead of the derived one, so a predictable port
   can be pinned
+
+#### Scenario: Pinning an identity does not dirty the checkout
+- **WHEN** a worktree pins its own slug or offset
+- **THEN** it does so in a file git ignores, with a committed example beside it,
+  so pinning never appears as a modification to configuration everyone shares
 
 ### Requirement: Cluster components are provisioned by the project
 The project's own bring-up SHALL install the cluster dependencies the stack needs
