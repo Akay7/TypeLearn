@@ -2,11 +2,54 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
+// The paths that belong to Django rather than to the SPA.
+//
+// This is the same list as `gateway.backendPaths` in chart/values.yaml, and it
+// is the same list for the same reason: in the cluster the Gateway sends these
+// to the backend, and here the dev server does. They have to move together — a
+// path added to one and not the other works in the cluster and 404s against the
+// dev server, or the reverse, and only whoever is running the frontend on the
+// host would ever see it.
+const BACKEND_PATHS = ['/graphql', '/media', '/admin', '/static']
+
+// Where those paths go when the frontend is served from here instead of from
+// behind the Gateway.
+//
+// The default is the worktree's own Gateway, which Tilt already forwards to the
+// host — so running the dev server against the real backend needs nothing set.
+// Point it at http://localhost:8000 instead to develop against a backend running
+// on the host under a debugger; the browser cannot tell the difference, because
+// either way it is talking to this server.
+const PROXY_TARGET =
+  process.env.VITE_PROXY_TARGET ?? `http://localhost:${process.env.GATEWAY_PORT ?? 8500}`
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
 
   server: {
+    // What keeps this one origin. The page, its assets, the GraphQL endpoint and
+    // the audio all come from this server's address, so the browser issues no
+    // cross-origin request, sends no preflight, and needs no CORS headers — the
+    // property the Gateway gives the deployed stack, provided here by the dev
+    // server for the case where the frontend is outside the cluster.
+    //
+    // changeOrigin stays off: the backend is told the host the browser actually
+    // used, which is what Django's ALLOWED_HOSTS and any absolute URL it builds
+    // should reflect.
+    //
+    // cors:false because Vite otherwise answers with Access-Control-Allow-Origin
+    // of its own accord. Nothing here needs it — every request is same-origin by
+    // construction — and a dev server that advertises cross-origin access to an
+    // API which has none is an invitation to build against a permission that
+    // exists in development and nowhere else. That is the exact mistake this
+    // whole arrangement removes.
+    cors: false,
+
+    proxy: Object.fromEntries(
+      BACKEND_PATHS.map((path) => [path, { target: PROXY_TARGET, changeOrigin: false }]),
+    ),
+
     // Bind beyond loopback: in the cluster the Gateway reaches this server from
     // outside the pod's own network namespace.
     host: true,

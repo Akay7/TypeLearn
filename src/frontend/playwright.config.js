@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 // The e2e suite runs against the real dev server, but never against the real
 // backend: every test stubs the GraphQL catalog and the audio clip, so it needs
-// no database, no ingested corpus, and no network. `VITE_API_URL` is pointed at
-// a same-origin path for the same reason — a cross-origin stub would drag CORS
-// preflights into tests that are not about CORS.
+// no database, no ingested corpus, and no network. Nothing reaches the dev
+// server's proxy either, for the same reason — the stubs intercept in the
+// browser, before a request leaves it.
 const PORT = 5175
 
 export default defineConfig({
@@ -39,6 +39,5 @@ export default defineConfig({
     command: `npm run dev -- --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
-    env: { VITE_API_URL: '/graphql/' },
   },
 })

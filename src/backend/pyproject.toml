@@ -18,6 +18,9 @@ dependencies = [
 dev = [
     "pytest>=9.1.1,<10.0.0",
     "pytest-django>=4.14.0,<5.0.0",
+    # The debugger is attached to the running container, so it ships in the dev
+    # image rather than being installed on a developer's host.
+    "debugpy>=1.8,<2.0",
 ]
 
 # This is a Django application, not a distributable library: there is no

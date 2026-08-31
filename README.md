@@ -19,37 +19,36 @@ address, so there is no cross-origin request to permit.
 
 ### Prerequisites
 
-`kind`, `tilt`, `kubectl`, `helm`, and a container runtime.
-
-**Tilt and kind must use the same runtime.** Tilt builds images through
-`DOCKER_HOST`; kind loads them into the cluster through
-`KIND_EXPERIMENTAL_PROVIDER`. If those disagree the build succeeds, the load
-finds nothing, and the cluster tries to pull `typelearn-backend` from Docker Hub.
-The Tiltfile refuses to start on a mismatch rather than let you discover it as an
-`ImagePullBackOff`.
-
-This project uses Docker for now, and pins it in a committed `.envrc`, so a
-shell that prefers Podman does not reach in here:
+`kind` 0.33+, `tilt`, `kubectl`, `helm`, and a container runtime — **Docker or
+rootless Podman, whichever you already use.** Nothing here forces one.
 
 ```bash
 direnv allow    # once after cloning
 ```
 
-To switch the project to Podman, replace the two `unset` lines in `.envrc` with:
+**The one rule is that both sides agree.** Tilt builds images through
+`DOCKER_HOST`; kind loads them into the cluster through
+`KIND_EXPERIMENTAL_PROVIDER`. If those name different runtimes the build
+succeeds, the load quietly finds nothing, and the cluster tries to pull
+`typelearn-backend` from Docker Hub. The Tiltfile refuses to start on a mismatch
+rather than let you discover it as an `ImagePullBackOff`.
+
+You only have to name the runtime once — `.envrc` completes the other side, so
+the two cannot end up half-configured. For Podman:
 
 ```bash
-systemctl --user enable --now podman.socket
-export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
-export KIND_EXPERIMENTAL_PROVIDER=podman
-# Podman's API doesn't implement Docker's BuildKit gRPC session.
-export DOCKER_BUILDKIT=0
+systemctl --user enable --now podman.socket    # once
+export KIND_EXPERIMENTAL_PROVIDER=podman       # in your shell profile, or .envrc.local
 ```
+
+`.envrc` then points `DOCKER_HOST` at Podman's socket and sets
+`DOCKER_BUILDKIT=0`, because Podman's API implements no BuildKit gRPC session.
+Setting `DOCKER_HOST` yourself works the same way round: kind is told to match.
+Set neither and both sides are Docker.
 
 > **Podman needs kind 0.33 or newer.** kind 0.32 cannot drive podman 6 at all:
 > `kind get clusters` fails with a template error, because podman 6 reports
-> container labels as a list where kind expects a map — independent of the
-> exports above. kind 0.33 fixes it. On kind 0.32, either upgrade or use Docker
-> and unset `KIND_EXPERIMENTAL_PROVIDER`.
+> container labels as a list where kind expects a map. 0.33 fixes it.
 
 ### 1. Create the cluster
 
@@ -101,29 +100,33 @@ Tiltfile keeps the directory writable so you can still remove them yourself.
 
 ### Running several worktrees at once
 
-Each git worktree gets its own namespace, its own database, and its own port,
-derived from the worktree's directory name:
+Each git worktree gets its own namespace, its own database, its own application
+port, and its own Tilt UI port, all derived from the worktree's directory name:
 
 ```bash
 git worktree add ../TypeLearn-feature -b feat/something
-cd ../TypeLearn-feature && tilt up   # e.g. http://localhost:8517
+cd ../TypeLearn-feature && direnv allow && tilt up
+#   application → http://localhost:8517
+#   Tilt UI     → http://localhost:10367   (10350 + the same offset)
 ```
 
-`scripts/worktree-env.sh export` prints what a checkout resolves to.
+`scripts/worktree-env.sh export` prints what a checkout resolves to. The
+application port is `8500 + offset` and the Tilt UI is `10350 + offset`; the main
+checkout is offset 0, so it keeps the bare `8500` and Tilt's default `10350`.
+`.envrc` sets `TILT_PORT` from that derivation — Tilt binds its web server before
+it reads the Tiltfile, so the port has to be in the environment — which is why
+`direnv allow` matters in a fresh worktree. Every worktree's `tilt up` then stays
+attached at once, each syncing source into its own pods.
 
-Two things are deliberately *not* per-worktree. The audio: every worktree reads
-the one `data/media`, so ingestion is done once rather than per checkout. And the
-Tilt UI, which stays on **http://localhost:10350** whichever worktree you are in
-— it is the tool you have open rather than something the project serves, so its
-URL should not move. The consequence is that one Tilt runs at a time: bring a
-second worktree up, and the first worktree's *stack* keeps serving on its own
-port in the cluster while its Tilt is not attached. Set `TILT_PORT` if you really
-want two Tilts at once.
+Only one thing is deliberately *not* per-worktree: the audio. Every worktree
+reads the one `data/media`, so ingestion is done once rather than per checkout.
 
-Pin a worktree's offset — and so its port and namespace — by copying
+Pin a worktree's offset — and so its namespace and both ports — by copying
 `.envrc.local.example` to `.envrc.local` in it. `.envrc` itself is committed and
 carries the runtime settings every checkout shares; `.envrc.local` is ignored, so
-pinning an offset does not leave your checkout looking modified.
+pinning an offset does not leave your checkout looking modified. To move just the
+Tilt port, set `TILT_PORT` directly, the same way `GATEWAY_PORT` moves just the
+application port.
 
 Everything else is isolated — an exercise ingested in one worktree is invisible
 to another.
@@ -141,15 +144,43 @@ npm run test              # vitest, over the pure logic in src/lib/ and the stor
 npm run test:e2e          # playwright, driving Chromium against its own dev server
 ```
 
-Nothing on the host needs the backend's dependencies — it runs in the cluster. If
-you want them anyway, for an editor's autocomplete or to step through a test in a
-debugger, `uv sync` in `src/backend` builds the venv `.vscode/` expects. Running a
-test there also needs a database, which the cluster does not expose; `.vscode/launch.json`
-documents the port-forward.
+### Working on one piece at a time
 
-The e2e suite needs no backend and no cluster: it stubs the GraphQL catalog and
-synthesises its own audio clip. The first run downloads Chromium —
-`npx playwright install chromium`.
+Everything runs in the cluster and source is synced into the pods, so ordinary
+editing needs nothing on your machine.
+
+**The frontend, on the host.** For fast HMR against real exercises. Nothing to
+set up: the dev server proxies `/graphql/`, `/media/`, `/admin/` and `/static/`
+to the Gateway `tilt up` already forwards, so the browser sees one origin exactly
+as it does in the cluster — no second backend, no database, no credentials.
+
+```bash
+cd src/frontend && npm run dev        # http://localhost:5173
+```
+
+**The backend, under a debugger — in the container.** The debugger attaches to
+the pod rather than to a copy of the application on your machine, so what you
+step through is the image a deployment runs, with its environment, its database
+and the Gateway in front of it. Nothing is reconstructed, so nothing about the
+reconstruction can differ.
+
+```bash
+echo 'export TYPELEARN_DEBUG_BACKEND=1' >> .envrc.local && direnv allow
+tilt up
+```
+
+The backend then runs under `debugpy` and Tilt forwards the attach port (5678,
+plus this worktree's offset). In VS Code, pick **Backend: attach to the
+container**. Nothing waits for you — the stack serves whether or not you attach.
+
+Under the debugger the backend runs Django's own server rather than gunicorn:
+gunicorn forks its workers, so a breakpoint in request handling would sit in a
+child the debugger never sees. Everything else is identical.
+
+**Backend tests run in the pod** — the "Run backend tests" button, which is the
+same place CI runs them, inside the image it built. There is deliberately no way
+to run them on your machine: the database is not exposed, and a green result
+somewhere else would mean less.
 
 `VITE_API_URL` is a same-origin path (`/graphql/`), because the Gateway routes
 that prefix to Django. There is no other origin to point it at.

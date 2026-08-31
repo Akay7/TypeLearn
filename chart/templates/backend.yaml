@@ -64,15 +64,36 @@ spec:
         - name: backend
           image: {{ include "typelearn.backendImage" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.backend.debug.enabled }}
+          # Under a debugger: Django's own server, single-process, so a
+          # breakpoint in request handling is in the process the debugger is
+          # attached to. --noreload for the same reason — the reloader's child
+          # would be a second process.
+          command:
+            - python
+            - -m
+            - debugpy
+            - --listen
+            - 0.0.0.0:{{ .Values.backend.debug.port }}
+            - manage.py
+            - runserver
+            - 0.0.0.0:8000
+            - --noreload
+          {{- else }}
           {{- with .Values.backend.command }}
           # Set only by development, which adds --reload so synced source takes
           # effect without a pod restart. Left empty the image's own CMD runs.
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 8000
+            {{- if .Values.backend.debug.enabled }}
+            - name: debug
+              containerPort: {{ .Values.backend.debug.port }}
+            {{- end }}
           envFrom:
             {{- include "typelearn.envFrom" . | nindent 12 }}
           env:

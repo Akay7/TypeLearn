@@ -3,7 +3,13 @@ import { computed, ref, watch } from 'vue'
 
 import { compare, dropLast, isComplete } from '../lib/checking'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/graphql/'
+// A path, never a URL. The application is served from one origin in every
+// environment — behind the Gateway in the cluster and in a deployment, and
+// behind the dev server's proxy when the frontend runs on the host — so the
+// backend is always reachable at a path on the current origin. An absolute URL
+// here would be a second origin, and the backend carries no CORS configuration
+// to make one work.
+const API_URL = import.meta.env.VITE_API_URL ?? '/graphql/'
 
 // The whole catalog, in one request. It is 100 rows, and fetching it up front
 // is what makes advancing to the next exercise cost nothing: the moment after a

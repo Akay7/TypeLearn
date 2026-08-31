@@ -3,13 +3,11 @@
   // the Tilt UI's "Run backend tests" button executes pytest in the pod, against
   // the real PostgreSQL, which is what CI does as well.
   //
-  // This block configures the Testing view for the *host* interpreter, which is
-  // useful for collection, navigation, and debugging a single test. Running one
-  // needs a database: port-forward the cluster's, in a terminal, and the same
-  // POSTGRES_* below will reach it.
-  //
-  //   kubectl port-forward svc/postgres-rw 5432:5432
-  //   kubectl get secret postgres-app -o jsonpath='{.data.password}' | base64 -d
+  // The Testing view is configured for the *host* interpreter so tests can be
+  // collected and navigated. Running them here will not work: the database lives
+  // in the cluster and is not exposed. Run the suite from the Tilt UI's "Run
+  // backend tests" button, which runs it in the pod — the same place CI runs it,
+  // inside the image it built.
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   // pytest's config lives in src/backend/pyproject.toml, so discovery has to

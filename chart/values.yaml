@@ -39,6 +39,23 @@ backend:
     enabled: true
     retries: 60
     retryDelaySeconds: 3
+  # Attach a debugger to the running container, which is the real artifact: the
+  # image a deployment runs, its environment, its database, and the Gateway in
+  # front of it. Nothing runs on a developer's host, so nothing has to be made
+  # reachable from one.
+  debug:
+    enabled: false
+    port: 5678
+    # Deliberately not waiting for a client: the stack has to come up whether or
+    # not anyone attaches, and a pod that blocks until a debugger arrives is a
+    # stack that appears broken to everyone who is not debugging.
+    #
+    # When on, the backend runs Django's own server single-process instead of
+    # gunicorn. gunicorn forks its workers, so a breakpoint in request handling
+    # would sit in a child the debugger never sees. Same image, same
+    # environment, same routing — only the server process differs, and only
+    # while debugging.
+
   # Probes send a fixed Host header so they pass whatever the pod's IP is —
   # Django checks Host against ALLOWED_HOSTS, and a probe to a pod IP would
   # otherwise need that IP listed, or the wildcard that no deployment should set.

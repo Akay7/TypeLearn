@@ -10,9 +10,11 @@
 #
 # --- Parallel worktrees -------------------------------------------------------
 # Each git worktree runs its own stack, in its own namespace, on its own port,
-# against the same cluster. The mapping is derived by scripts/worktree-env.sh
-# and read from here rather than recomputed, so Tilt and anything else that
-# needs to know where a worktree lives cannot disagree.
+# with its own Tilt UI on 10350+offset, against the same cluster. The mapping is
+# derived by scripts/worktree-env.sh and read from here rather than recomputed,
+# so Tilt and anything else that needs to know where a worktree lives cannot
+# disagree. Tilt's own port is set from .envrc (TILT_PORT), because Tilt binds
+# its web server before this file is evaluated.
 
 # Pinned once, read by both local development and CI. The spike in this change
 # verified these versions work together on kind.
@@ -43,6 +45,20 @@ if _provider != "podman" and _builder_is_podman:
          "set to use " + _provider + ", so images would never reach the cluster. " +
          "Export KIND_EXPERIMENTAL_PROVIDER=podman to match. See the README.")
 
+# --- The cluster this deploys into --------------------------------------------
+# Tilt refuses remote clusters on its own, but every kind cluster on this machine
+# looks equally local to it — so with another project's cluster selected, `tilt
+# up` here would cheerfully deploy this stack into it, create a namespace, and
+# leave a CNPG cluster behind. The runtime guard above exists for the same class
+# of mistake: something that is quietly wrong rather than loudly broken.
+ALLOWED_CONTEXT = os.getenv("TYPELEARN_KUBE_CONTEXT", "kind-typelearn")
+
+if k8s_context() != ALLOWED_CONTEXT:
+    fail("kubectl is pointed at '" + k8s_context() + "', not '" + ALLOWED_CONTEXT + "'. " +
+         "This would deploy TypeLearn into that cluster. Run " +
+         "`kubectl config use-context " + ALLOWED_CONTEXT + "`, or set TYPELEARN_KUBE_CONTEXT " +
+         "if this project's cluster is named differently.")
+
 # --- Worktree identity --------------------------------------------------------
 def _wt(field):
     return str(local("./scripts/worktree-env.sh %s" % field, quiet=True, echo_off=True)).strip()
@@ -50,8 +66,25 @@ def _wt(field):
 SLUG = _wt("slug")
 NAMESPACE = _wt("namespace")
 PORT = int(_wt("port"))
+OFFSET = int(_wt("offset"))
 
-print("Worktree slug=%s namespace=%s gateway=http://localhost:%d" % (SLUG, NAMESPACE, PORT))
+# --- Debugging the backend ----------------------------------------------------
+# The debugger attaches to the container, not to a copy of the application on the
+# host. That is the whole point: the thing being stepped through is the image a
+# deployment runs, with its environment, its database and the Gateway in front of
+# it — nothing is reconstructed on a developer's machine, so nothing about the
+# reconstruction can differ.
+#
+# TYPELEARN_DEBUG_BACKEND=1, most usefully in .envrc.local. The port moves per
+# worktree like every other one, so two checkouts can each have a debugger
+# attached. The stack comes up either way: nothing waits for a client.
+DEBUG_BACKEND = os.getenv("TYPELEARN_DEBUG_BACKEND", "") not in ("", "0", "false")
+DEBUG_PORT = int(os.getenv("TYPELEARN_DEBUG_PORT", str(5678 + OFFSET)))
+# What .envrc should have put on TILT_PORT — reported so a mismatch (direnv not
+# allowed, a stale shell) is visible rather than surfacing as a port collision.
+TILT_PORT = _wt("tilt-port")
+
+print("Worktree slug=%s namespace=%s gateway=http://localhost:%d tilt=http://localhost:%s" % (SLUG, NAMESPACE, PORT, TILT_PORT))
 
 # --- Cluster-scoped bootstrap, shared by every worktree -----------------------
 # Installed only when missing, and never handed to Tilt: if Tilt owned these, a
@@ -70,20 +103,48 @@ def _missing(query):
 # behind a bootstrap that believes it already ran.
 if _missing("kubectl get crd installations.operator.tigera.io --ignore-not-found -o name"):
     print("Installing the Tigera Operator (Calico %s) ..." % CALICO_VERSION)
+    # Two manifests, and the order matters. Calico stopped shipping its CRDs
+    # inside tigera-operator.yaml — at v3.32 that file defines none of them and
+    # operator-crds.yaml defines all 32 — so applying only the operator leaves a
+    # cluster with a Deployment and no `Installation` kind to give it. The next
+    # line then fails with a bare NotFound, because `kubectl wait` errors on a
+    # resource that does not exist rather than waiting for one to appear.
+    #
+    # This is invisible on an established cluster: the gate above skips the whole
+    # block once the CRD is there, so only a fresh cluster — CI's, or a
+    # developer's first run — ever executes it.
+    local("kubectl apply --server-side -f https://raw.githubusercontent.com/projectcalico/calico/%s/manifests/operator-crds.yaml" % CALICO_VERSION)
     local("kubectl apply --server-side -f https://raw.githubusercontent.com/projectcalico/calico/%s/manifests/tigera-operator.yaml" % CALICO_VERSION)
-    # The CRDs land with the operator, but a client that has already cached
-    # discovery will not see them: applying the Installation in the same breath
-    # fails with `no matches for kind "Installation"`. Wait for the CRD itself.
+    # A client that has already cached discovery will not see a new CRD:
+    # applying the Installation in the same breath fails with `no matches for
+    # kind "Installation"`. Wait for the CRD itself.
     local("kubectl wait --for=condition=Established --timeout=120s crd/installations.operator.tigera.io")
 
+# Each of these waits twice, and the first wait is the one that is easy to leave
+# out. `kubectl wait` errors immediately on a resource that does not exist rather
+# than waiting for one to appear, and both objects below are created by the
+# operator *after* it notices what was just applied — so waiting straight for the
+# condition is a race against the operator's reconcile loop, lost with a bare
+# NotFound that names the object and not the reason.
 if _missing("kubectl get installation default --ignore-not-found -o name"):
     print("Installing Calico's CNI ...")
     local("kubectl apply -f k8s/calico-installation.yaml")
+    local("kubectl wait --for=create --timeout=120s tigerastatus/calico")
     local("kubectl wait --for=condition=Available --timeout=600s tigerastatus/calico")
 
 if _missing("kubectl get gatewayapi default --ignore-not-found -o name"):
     print("Enabling the Calico Gateway API ...")
     local("kubectl apply -f k8s/calico-gatewayapi.yaml")
+    # Three waits, because three things have to arrive in order and none of them
+    # is instant. Enabling Gateway API makes the operator install the Gateway API
+    # CRDs, so at first the *type* does not exist — and kubectl fails discovery
+    # ("the server doesn't have a resource type") rather than waiting, which
+    # `--for=create` cannot rescue: it waits for an object of a type that is
+    # already known. So wait for the CRD, then for the object, then for it to be
+    # accepted.
+    local("kubectl wait --for=create --timeout=300s crd/gatewayclasses.gateway.networking.k8s.io")
+    local("kubectl wait --for=condition=Established --timeout=300s crd/gatewayclasses.gateway.networking.k8s.io")
+    local("kubectl wait --for=create --timeout=300s gatewayclass/tigera-gateway-class")
     local("kubectl wait --for=condition=Accepted --timeout=600s gatewayclass/tigera-gateway-class")
 
 if _missing("kubectl get crd clusters.postgresql.cnpg.io --ignore-not-found -o name"):
@@ -206,6 +267,9 @@ DEV_VALUES = {
         # --reload so Tilt's synced source takes effect without a pod restart.
         # A deployment sets no command and gets the image's own.
         "command": ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--reload"],
+        # Under a debugger the chart ignores the command above and runs Django's
+        # own server single-process instead; see chart/values.yaml for why.
+        "debug": {"enabled": DEBUG_BACKEND, "port": 5678},
     },
     # The dev server, and the port the browser really reaches the Gateway on so
     # Vite's HMR websocket connects.
@@ -256,6 +320,7 @@ k8s_resource(
     "backend",
     objects=BACKEND_OBJECTS,
     resource_deps=["postgres"],
+    port_forwards=[port_forward(DEBUG_PORT, 5678, name="debug")] if DEBUG_BACKEND else [],
     labels=["app"],
 )
 k8s_resource("frontend", labels=["app"])
