@@ -6,3 +6,8 @@
 # Nothing is lost by ignoring it: everything in here is derived, and the sources
 # it is derived from (.env, the Tiltfile, chart/, k8s/) are watched already.
 .tilt/
+
+# Linked worktrees, which live in the repository. Each holds a full copy of the
+# source Tilt watches, so without this a single edit in one worktree looks like a
+# change to every other worktree's build context as well.
+.worktrees/

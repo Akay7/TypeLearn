@@ -38,6 +38,11 @@ dist-ssr/
 # otherwise reload in a loop on its own output.
 .tilt/
 
+# Linked worktrees live inside the repository, so they travel with it and are
+# easy to find. Each is a full checkout, so it must never be seen as content of
+# the checkout containing it — by git here, or by Tilt in .tiltignore.
+.worktrees/
+
 # direnv: .envrc is committed (it pins the container runtime for everyone);
 # only the per-checkout override is ignored.
 .envrc.local

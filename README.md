@@ -103,12 +103,22 @@ Tiltfile keeps the directory writable so you can still remove them yourself.
 Each git worktree gets its own namespace, its own database, its own application
 port, and its own Tilt UI port, all derived from the worktree's directory name:
 
+Worktrees live in `.worktrees/`, inside the repository, so they travel with it
+and are easy to find. That directory is git-ignored — a worktree is a full
+checkout and must never be seen as content of the checkout containing it — and
+also listed in `.tiltignore`, so an edit in one is not read as a change to every
+other one's build context.
+
 ```bash
-git worktree add ../TypeLearn-feature -b feat/something
-cd ../TypeLearn-feature && direnv allow && tilt up
-#   application → http://localhost:8517
-#   Tilt UI     → http://localhost:10367   (10350 + the same offset)
+git worktree add .worktrees/something -b feat/something
+cd .worktrees/something && direnv allow && tilt up
+#   application → http://localhost:8505
+#   Tilt UI     → http://localhost:10355   (10350 + the same offset)
 ```
+
+The offset comes from the directory name, so `.worktrees/something` and a
+worktree of that name anywhere else resolve identically; nesting changes where
+they live, not what they are.
 
 `scripts/worktree-env.sh export` prints what a checkout resolves to. The
 application port is `8500 + offset` and the Tilt UI is `10350 + offset`; the main
