@@ -16,14 +16,23 @@
 #   offset    = WORKTREE_OFFSET | 0 (for "default") | cksum(slug) % 50 + 1
 #   port      = GATEWAY_PORT    | 8500 + offset
 #   tilt-port = TILT_PORT       | 10350 + offset
+#   db-port   = POSTGRES_HOST_PORT | 15432 + offset
 #
-# The Gateway is the host port the application is served on; the database is
-# reached from inside the cluster and exposes none. Both the Gateway port and
-# Tilt's own UI port move with the offset, so several worktrees can serve their
-# stacks and keep their Tilts attached at the same time — a detached Tilt stops
-# syncing source into its worktree's pods, so it is not the tool you merely have
-# open, it is part of the running stack. The main checkout (offset 0) keeps
-# Tilt's default 10350, so a bare clone with no worktrees sees no change.
+# The Gateway is the host port the application is served on. The database is
+# forwarded to the host as well, for one reason: the editor's Testing view runs
+# pytest on the host, so a breakpoint in a test is an ordinary breakpoint. It is
+# a development affordance, not how the application reaches its database — the
+# backend, migrations and ingestion all reach it from inside the cluster.
+#
+# 15432 rather than 5432, because a developer may well have a PostgreSQL of
+# their own on the usual port and the forward would silently lose to it.
+#
+# All three host ports move with the offset, so several worktrees can serve
+# their stacks and keep their Tilts attached at the same time — a detached Tilt
+# stops syncing source into its worktree's pods, so it is not the tool you
+# merely have open, it is part of the running stack. The main checkout (offset
+# 0) keeps Tilt's default 10350, so a bare clone with no worktrees sees no
+# change.
 #
 # Usage:
 #   worktree-env.sh slug        # "default" or e.g. "add-session-summary"
@@ -31,6 +40,7 @@
 #   worktree-env.sh offset      # 0 for the main checkout, else 1..50
 #   worktree-env.sh port        # the Gateway's host port
 #   worktree-env.sh tilt-port   # the host port Tilt's UI listens on
+#   worktree-env.sh db-port     # the host port the database is forwarded to
 #   worktree-env.sh export      # WT_SLUG=… WT_NAMESPACE=… … for `eval`
 #   worktree-env.sh sanitize X  # reduce an arbitrary value to a slug label
 set -eu
@@ -87,10 +97,11 @@ else
 	NAMESPACE="typelearn-$SLUG"
 fi
 OFFSET=$(resolve_offset "$SLUG")
-# Both bases end in 00 and the offset stays under 100, so the last two digits of
-# each port name the worktree, and the main checkout gets the bare 8500 / 10350.
+# The offset stays under 100, so the last two digits of each port name the
+# worktree, and the main checkout gets the bare 8500 / 10350 / 15432.
 PORT=${GATEWAY_PORT:-$(( 8500 + OFFSET ))}
 TILT_PORT=${TILT_PORT:-$(( 10350 + OFFSET ))}
+DB_PORT=${POSTGRES_HOST_PORT:-$(( 15432 + OFFSET ))}
 
 case "${1:-export}" in
 	slug) printf '%s\n' "$SLUG" ;;
@@ -98,6 +109,7 @@ case "${1:-export}" in
 	offset) printf '%s\n' "$OFFSET" ;;
 	port) printf '%s\n' "$PORT" ;;
 	tilt-port) printf '%s\n' "$TILT_PORT" ;;
-	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s WT_TILT_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" "$TILT_PORT" ;;
-	*) echo "usage: $0 {slug|namespace|offset|port|tilt-port|export|sanitize <value>}" >&2; exit 2 ;;
+	db-port) printf '%s\n' "$DB_PORT" ;;
+	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s WT_TILT_PORT=%s WT_DB_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" "$TILT_PORT" "$DB_PORT" ;;
+	*) echo "usage: $0 {slug|namespace|offset|port|tilt-port|db-port|export|sanitize <value>}" >&2; exit 2 ;;
 esac

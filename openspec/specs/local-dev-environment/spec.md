@@ -146,11 +146,23 @@ application is reached on.
 - **THEN** each serves its own build of the application on its own port, backed
   by its own database, and neither can read the other's exercises
 
-#### Scenario: Only the Gateway is exposed to the host
+#### Scenario: What a running worktree exposes to the host
 - **WHEN** a worktree's stack is running
-- **THEN** the Gateway is the only service reachable from the host, and the
-  database is reachable only from inside the cluster — every management command
-  runs in a pod rather than against a forwarded port
+- **THEN** the Gateway is the only way the application is reached from the host,
+  and every management command runs in a pod rather than against a forwarded
+  port
+
+#### Scenario: The database is reachable from the host for tests
+- **WHEN** a worktree's stack is running
+- **THEN** its database is also forwarded to a host port derived from the same
+  worktree identity, and the credentials are written to an ignored file, so the
+  editor can run and debug the backend suite as ordinary host code — while the
+  suite that gates a change still runs in the pod, inside the image that ships
+
+#### Scenario: The forwarded database survives a whole test run
+- **WHEN** the backend suite is run on the host against that forwarded port
+- **THEN** every test in the run reaches the database, rather than the run
+  failing after the first connection closes
 
 #### Scenario: The tool's own UI does not move
 - **WHEN** several worktrees are running at once

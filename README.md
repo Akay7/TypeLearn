@@ -121,8 +121,10 @@ worktree of that name anywhere else resolve identically; nesting changes where
 they live, not what they are.
 
 `scripts/worktree-env.sh export` prints what a checkout resolves to. The
-application port is `8500 + offset` and the Tilt UI is `10350 + offset`; the main
-checkout is offset 0, so it keeps the bare `8500` and Tilt's default `10350`.
+application port is `8500 + offset`, the Tilt UI is `10350 + offset`, and the
+forwarded database is `15432 + offset` — 15432 rather than 5432 so it cannot
+collide with a PostgreSQL you run yourself. The main checkout is offset 0, so it
+keeps the bare `8500` and Tilt's default `10350`.
 `.envrc` sets `TILT_PORT` from that derivation — Tilt binds its web server before
 it reads the Tiltfile, so the port has to be in the environment — which is why
 `direnv allow` matters in a fresh worktree. Every worktree's `tilt up` then stays
@@ -143,9 +145,14 @@ to another.
 
 ### Running commands and tests
 
-No database port is exposed; the database is reached from inside the cluster. The
-Tilt UI has buttons for migrations, the backend test suite, and ingestion. The
-frontend suites run on the host:
+Management commands run in the pod — the Tilt UI has buttons for migrations, the
+backend test suite, and ingestion. The backend suite that counts runs there too,
+inside the image CI built.
+
+The database is also forwarded to the host (`15432 + offset`) for one purpose:
+so the editor can run and debug the backend tests. See below.
+
+The frontend suites run on the host:
 
 ```bash
 cd src/frontend
@@ -187,10 +194,32 @@ Under the debugger the backend runs Django's own server rather than gunicorn:
 gunicorn forks its workers, so a breakpoint in request handling would sit in a
 child the debugger never sees. Everything else is identical.
 
-**Backend tests run in the pod** — the "Run backend tests" button, which is the
-same place CI runs them, inside the image it built. There is deliberately no way
-to run them on your machine: the database is not exposed, and a green result
-somewhere else would mean less.
+**Backend tests, from the editor.** `tilt up` forwards the database to
+`127.0.0.1:15432` (plus this worktree's offset) and writes the credentials to
+`.tilt/backend-test.env`, which `.vscode/settings.json` points VS Code at. So
+the Testing view works the ordinary way: run one test, set a breakpoint in it,
+press debug, step. Nothing to attach to and no pod to pick.
+
+It needs the test dependencies on the host interpreter, once:
+
+```bash
+cd src/backend && uv sync
+```
+
+Failures saying `connection refused` mean the stack is not up — the forward only
+exists while Tilt runs.
+
+The generated file sets `PGSSLMODE=disable`, and that line is load-bearing.
+CloudNativePG serves TLS, and a TLS client that disconnects leaves PostgreSQL
+resetting the connection — which `kubectl port-forward` treats as fatal for the
+*whole* forward rather than for that one connection. With TLS on, exactly one
+connection ever succeeds: pytest creates its test database, the forward dies
+with `lost connection to pod`, and every test then errors on a refused
+connection. It looks like flaky tests and is not.
+
+**The suite that counts still runs in the pod** — the "Run backend tests"
+button, and CI, inside the image that ships. The host run is for iterating on a
+test; a green result there is not the one that decides anything.
 
 `VITE_API_URL` is a same-origin path (`/graphql/`), because the Gateway routes
 that prefix to Django. There is no other origin to point it at.

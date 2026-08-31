@@ -15,6 +15,12 @@
   //
   // The backend then runs under debugpy and Tilt forwards its port. Nothing
   // waits for you — the stack serves whether or not you ever attach.
+  //
+  // Tests are the exception, and deliberately so: they run on the host, against
+  // the database `tilt up` forwards, so debugging one needs nothing from this
+  // file at all — press the debug icon beside the test. The last configuration
+  // below is never picked by hand; it only supplies the settings that press
+  // uses.
   "version": "0.2.0",
   "configurations": [
     {
@@ -61,6 +67,22 @@
         "action": "debugWithChrome",
         "webRoot": "${workspaceFolder}/src/frontend"
       }
+    },
+    {
+      // Not started from this list. "purpose": ["debug-test"] is what makes the
+      // Testing view's debug icon use it, so this is where a debugged test's
+      // settings live rather than a configuration to remember to pick.
+      //
+      // justMyCode off for the same reason as the attach configuration above: a
+      // failing test is usually explained inside Django or Strawberry, and a
+      // debugger that will not step into them stops right where the interesting
+      // part begins.
+      "name": "Backend: debug the test under the cursor",
+      "type": "debugpy",
+      "request": "launch",
+      "purpose": ["debug-test"],
+      "console": "internalConsole",
+      "justMyCode": false
     }
   ]
 }
