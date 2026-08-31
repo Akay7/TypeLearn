@@ -1,0 +1,7 @@
+# Copy to .envrc.local in a worktree to pin its identity. Git-ignored.
+#
+# The offset decides this worktree's namespace (typelearn-<slug>) and the port
+# its stack is served on (8500 + offset). Left unset it is derived from the
+# directory name, which is stable but arbitrary; a small fixed number is easier
+# to remember. The main checkout is 0.
+export WORKTREE_OFFSET=1

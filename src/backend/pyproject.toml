@@ -7,37 +7,35 @@ authors = [
 ]
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "django (>=6.1,<7.0)",
-    "strawberry-graphql-django (>=0.87.0,<0.88.0)",
-    "psycopg[binary] (>=3.3.4,<4.0.0)",
-    "django-cors-headers (>=4.9.0,<5.0.0)",
-    "gunicorn (>=26.1.0,<27.0.0)",
-    "pillow (>=12.3.0,<13.0.0)"
+    "django>=6.1,<7.0",
+    "strawberry-graphql-django>=0.87.0,<0.88.0",
+    "psycopg[binary]>=3.3.4,<4.0.0",
+    "gunicorn>=26.1.0,<27.0.0",
+    "pillow>=12.3.0,<13.0.0",
 ]
-
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "pytest (>=9.1.1,<10.0.0)",
-    "pytest-django (>=4.14.0,<5.0.0)"
+    "pytest>=9.1.1,<10.0.0",
+    "pytest-django>=4.14.0,<5.0.0",
+    # The debugger is attached to the running container, so it ships in the dev
+    # image rather than being installed on a developer's host.
+    "debugpy>=1.8,<2.0",
 ]
 
 # This is a Django application, not a distributable library: there is no
-# `typelearn_backend` module to install, so neither tool should try. Without
-# these, both fail with "No file/folder found for package typelearn-backend" --
-# uv when it asks the build backend for an editable install, Poetry when it
-# installs the root project at the end of `poetry install`.
-
+# `typelearn_backend` module to install, so uv must not try. Without this it
+# fails with "No file/folder found for package typelearn-backend" when it asks a
+# build backend for an editable install. It is also why there is no
+# [build-system] here: nothing builds this project, it is only ever synced.
 [tool.uv]
 package = false
-
-[tool.poetry]
-package-mode = false
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "typelearn.settings"
 python_files = ["test_*.py", "*_test.py"]
+# The container runs as a non-root user that does not own /app, so pytest cannot
+# write its cache there and every run prints a PytestCacheWarning. Nothing in
+# this project relies on the cache (no --lf/--sw workflow in CI or the Tilt
+# button), so turn it off rather than carve out a writable path for it.
+addopts = "-p no:cacheprovider"

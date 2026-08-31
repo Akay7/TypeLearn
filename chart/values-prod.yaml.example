@@ -1,0 +1,111 @@
+# A deployment's starting point. Copy, fill in, and install with it:
+#
+#   helm install typelearn ./chart --namespace typelearn --create-namespace \
+#     --values my-values.yaml
+#
+# Only what a deployment actually has to decide is here. Everything else already
+# defaults to the deployment-shaped answer in values.yaml — the frontend serves
+# the built bundle, debug is off, and no secret is written down.
+#
+# The cluster must already have: a Gateway API implementation providing the
+# GatewayClass named below, and the CloudNativePG operator. This chart installs
+# neither; see the README.
+
+# --- Images -------------------------------------------------------------------
+# Pin them. An untagged image is a deployment that cannot be reproduced, and
+# `latest` is a deployment that changes when you did not ask it to.
+image:
+  backend:
+    repository: ghcr.io/akay7/typelearn-backend
+    tag: "0.1.0"
+  frontend:
+    repository: ghcr.io/akay7/typelearn-frontend
+    tag: "0.1.0"
+  # pullSecrets:
+  #   - ghcr-pull
+
+# --- Routing ------------------------------------------------------------------
+gateway:
+  className: tigera-gateway-class
+  host: typelearn.example.com
+  tls:
+    # A Secret holding tls.crt and tls.key for the hostname above. Bring your
+    # own — the chart configures no issuer.
+    secretName: typelearn-tls
+
+# --- Configuration ------------------------------------------------------------
+# Any backend environment variable can be set here; these override the chart's
+# defaults. gateway.host is added to DJANGO_ALLOWED_HOSTS automatically, so it
+# does not need restating.
+env:
+  DJANGO_DEBUG: "false"
+
+# --- Secrets ------------------------------------------------------------------
+# Two ways, and the second is the one to prefer.
+#
+# `secrets` renders a Secret from these values — convenient, and it puts the
+# value in the release, where anyone who can run `helm get values` can read it.
+# Use it for a throwaway environment, not for one that matters.
+#
+# secrets:
+#   DJANGO_SECRET_KEY: "change-me"
+#
+# `existingSecret` names a Secret this chart neither creates nor copies — the
+# answer when an operator owns it. Its keys become the backend's environment, so
+# it must hold DJANGO_SECRET_KEY.
+#
+#   kubectl create secret generic typelearn-secrets \
+#     --from-literal=DJANGO_SECRET_KEY="$(openssl rand -base64 48)"
+existingSecret: typelearn-secrets
+
+# --- Database -----------------------------------------------------------------
+# CloudNativePG provisions it, generates its credentials, and the backend reads
+# them from the Secret CNPG writes. They appear in no values file.
+postgres:
+  enabled: true
+  instances: 1
+  storage:
+    size: 20Gi
+    # The name your cluster provides. Getting this wrong leaves a Cluster
+    # waiting on a claim nothing will bind.
+    storageClass: fast-ssd
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 2Gi}
+
+# Or hand it a database it does not manage — a managed Postgres, say. Then the
+# block above is ignored and no database is created in the cluster.
+#
+# postgres:
+#   enabled: false
+# externalDatabase:
+#   host: typelearn.postgres.database.example.com
+#   port: 5432
+#   database: typelearn
+#   user: typelearn
+#   existingSecret: typelearn-db
+#   passwordKey: password
+
+# --- Media --------------------------------------------------------------------
+# Ordinary provisioned storage. The class must support ReadWriteMany if the
+# backend ever runs more than one replica; with a single replica ReadWriteOnce is
+# enough — set accessModes accordingly rather than assuming.
+media:
+  size: 50Gi
+  storageClass: nfs
+  accessModes:
+    - ReadWriteMany
+
+# --- Workloads ----------------------------------------------------------------
+backend:
+  replicas: 2
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 1Gi}
+
+frontend:
+  mode: serve
+  replicas: 2
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 256Mi}

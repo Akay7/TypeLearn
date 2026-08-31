@@ -1,0 +1,31 @@
+# The local cluster every worktree shares.
+#
+#   kind create cluster --config k8s/kind.yaml
+#
+# One node, deliberately. The shared media directory below is a hostPath: with a
+# second node, a pod scheduled onto it would see an empty directory rather than
+# an error — a silent failure. One node keeps that impossible.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: typelearn
+networking:
+  # Calico brings its own CNI; kindnet would fight it.
+  disableDefaultCNI: true
+  # Matches the IPPool in the Installation the Tiltfile applies. If these two
+  # disagree, pods never get addresses.
+  podSubnet: "192.168.0.0/16"
+nodes:
+  - role: control-plane
+    extraMounts:
+      # The ingested clips, shared by every worktree and living on the host, so
+      # they survive `kind delete cluster` and ingestion is once-ever. The path
+      # is filled in by scripts/kind-config.sh — it belongs to whoever cloned
+      # the repository, so it is not written down here.
+      - hostPath: TYPELEARN_MEDIA_DIR
+        containerPath: /media
+      # The Common Voice release, read in place and never copied into an image.
+      # Filled in the same way, from the environment; it falls back to the media
+      # directory when no corpus is configured, since a mount needs a real path.
+      - hostPath: TYPELEARN_CORPUS_DIR
+        containerPath: /corpus
+        readOnly: true

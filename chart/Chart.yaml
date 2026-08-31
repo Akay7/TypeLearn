@@ -1,0 +1,24 @@
+# The one description of the TypeLearn stack. Development renders it with
+# generated values (see the Tiltfile); a deployment renders it with its own.
+#
+# No dependencies on purpose: Calico, its Gateway API support, and the
+# CloudNativePG operator are cluster-scoped and shared by every release in a
+# cluster, so this chart states them as prerequisites and installs none of them.
+# See the README for what a cluster must already have.
+apiVersion: v2
+name: typelearn
+description: Thai typing practice — Django/Strawberry backend, Vue frontend, one origin
+type: application
+
+# The chart's own version. appVersion is the application's, and is the default
+# image tag, so a release without explicit tags is pinned rather than floating.
+version: 0.1.0
+appVersion: "0.1.0"
+
+# Gateway API v1 and the CNPG Cluster CR need a reasonably current cluster.
+kubeVersion: ">=1.29.0-0"
+
+keywords:
+  - thai
+  - typing
+home: https://github.com/Akay7/TypeLearn

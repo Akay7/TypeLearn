@@ -1,0 +1,83 @@
+{{- if not (has .Values.frontend.mode (list "dev" "serve")) }}
+{{- fail (printf "frontend.mode must be \"dev\" or \"serve\", not %q" .Values.frontend.mode) }}
+{{- end }}
+{{- $dev := eq .Values.frontend.mode "dev" }}
+{{- $port := ternary 5173 80 $dev }}
+# The frontend, both ways it runs, from one template.
+#
+#   serve — the built bundle behind nginx, which is what a deployment runs.
+#   dev   — the Vite dev server, so hot reload survives the move into a cluster.
+#
+# The difference is a port, a probe, and one environment variable. It is written
+# here rather than described in a comment somewhere, because a production
+# behaviour that exists only as prose is one nobody has ever run.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+    {{- include "typelearn.selectorLabels" (dict "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "typelearn.selectorLabels" (dict "component" "frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "typelearn.labels" . | nindent 8 }}
+        {{- include "typelearn.selectorLabels" (dict "component" "frontend") | nindent 8 }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: frontend
+          image: {{ include "typelearn.frontendImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $port }}
+          {{- if $dev }}
+          env:
+            # Vite's HMR websocket is opened by the browser, which reaches this
+            # pod through the Gateway — so the client has to be told the port it
+            # actually connects on, not the one the server listens on. Quoted
+            # because an environment value is a string and a bare number is
+            # rejected; this is a value now rather than a placeholder some
+            # renderer might strip the quotes from.
+            - name: VITE_HMR_CLIENT_PORT
+              value: {{ required "frontend.mode=dev needs frontend.hmrClientPort — the port the browser reaches the Gateway on" .Values.frontend.hmrClientPort | quote }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- with .Values.frontend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "typelearn.selectorLabels" (dict "component" "frontend") | nindent 4 }}
+  ports:
+    # Always 80 to the Gateway, whichever port the pod listens on, so the
+    # HTTPRoute does not have to know which mode is running.
+    - name: http
+      port: 80
+      targetPort: http

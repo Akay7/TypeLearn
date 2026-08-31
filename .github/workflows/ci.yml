@@ -1,0 +1,345 @@
+# Build the images once, test inside them, prove the stack comes up, then
+# promote what passed. Nothing is rebuilt between being tested and being
+# published, so the artifact that passed is the artifact that ships.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  # A new commit supersedes the run still in flight for the same ref, so the
+  # reported result always belongs to the current commit.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Image names have to be lowercase for the registry, the repository owner may
+  # not be, and expressions have no lowercase function — so it is computed once
+  # here and read by every other job.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_image: ${{ steps.vars.outputs.backend_image }}
+      frontend_image: ${{ steps.vars.outputs.frontend_image }}
+      candidate_tag: ${{ steps.vars.outputs.candidate_tag }}
+    steps:
+      - id: vars
+        run: |
+          REPO="${GITHUB_REPOSITORY,,}"
+          echo "backend_image=ghcr.io/${REPO}/typelearn-backend" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/${REPO}/typelearn-frontend" >> "$GITHUB_OUTPUT"
+          echo "candidate_tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+  # A template that does not render is a deployment that fails after the images
+  # are built, the cluster is up, and someone is waiting. This runs first and
+  # needs nothing: no images, no cluster, no registry.
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # prerequisiteChecks off for lint alone: lint renders without a cluster and
+      # cannot be told what one has, so the checks would report a missing
+      # operator that the render steps below supply properly.
+      - name: Lint
+        run: helm lint chart --strict --set prerequisiteChecks=false
+      # `helm template` offline sees only Kubernetes' built-in APIs, so the
+      # chart's prerequisite checks are told what the target cluster has.
+      # Rendering every branch the chart claims to support is the point: a
+      # conditional nobody renders is a conditional nobody has tested.
+      - name: Render every branch the chart offers
+        env:
+          API: --api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1
+        run: |
+          set -e
+          echo "defaults — a deployment that supplied nothing"
+          helm template typelearn chart $API > /dev/null
+          echo "the documented production starting point"
+          helm template typelearn chart $API --values chart/values-prod.yaml.example > /dev/null
+          echo "development, as Tilt renders it"
+          helm template typelearn chart $API --namespace typelearn-ci \
+            --set frontend.mode=dev --set frontend.hmrClientPort=8500 \
+            --set media.hostPath=/media --set worktree.slug=ci \
+            --set postgres.allowCreateDatabase=true > /dev/null
+          echo "an external database"
+          helm template typelearn chart $API --set postgres.enabled=false \
+            --set externalDatabase.host=db.example.com \
+            --set externalDatabase.existingSecret=db-password > /dev/null
+          echo "ingestion"
+          helm template typelearn chart $API \
+            --set ingest.enabled=true --set ingest.corpusHostPath=/corpus > /dev/null
+      # The requirement is "secrets are not configuration". Asserted here rather
+      # than trusted, because the failure is silent: a secret in a ConfigMap
+      # works perfectly and is readable by anyone who can read the namespace.
+      - name: A secret must never reach a ConfigMap
+        env:
+          API: --api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1
+        run: |
+          set -e
+          helm template typelearn chart $API --set secrets.DJANGO_SECRET_KEY=canary-value \
+            --show-only templates/configmap.yaml | grep -q canary-value \
+            && { echo "FAIL: a secret rendered into the ConfigMap"; exit 1; } || true
+          helm template typelearn chart $API --set secrets.DJANGO_SECRET_KEY=canary-value \
+            --show-only templates/secret.yaml | grep -q canary-value \
+            || { echo "FAIL: the secret did not render into the Secret"; exit 1; }
+          echo "existingSecret must make the chart create none of its own"
+          helm template typelearn chart $API --set existingSecret=supplied-elsewhere \
+            --set secrets.DJANGO_SECRET_KEY=canary-value \
+            | grep -q "^kind: Secret" \
+            && { echo "FAIL: a Secret was rendered despite existingSecret"; exit 1; } || true
+
+  build-backend:
+    runs-on: ubuntu-latest
+    needs: [setup]
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ${{ needs.setup.outputs.backend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the backend candidate (runtime — what would ship)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          file: ./src/backend/Containerfile
+          target: runtime
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      # The runtime image installs dependencies without the dev group, so it has
+      # no pytest to run the suite with. The `dev` stage is the same image plus
+      # that group — same Python, same code — so the suite still runs inside the
+      # artifact this run built rather than an environment assembled beside it.
+      - name: Build and push the backend test stage
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          file: ./src/backend/Containerfile
+          target: dev
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}-test
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    needs: [setup]
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ${{ needs.setup.outputs.frontend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the frontend candidate (nginx, built bundle)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Containerfile
+          target: serve
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+      # The served image is nginx and a bundle: no node, no node_modules, and so
+      # nothing to run a test suite with. The `build` stage has both, so it is
+      # pushed too and the two test jobs below run inside it — what is tested is
+      # then what was actually installed, not a separately assembled environment.
+      - name: Build and push the frontend test stage
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/frontend
+          file: ./src/frontend/Containerfile
+          target: build
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.TAG }}-test
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  pytest:
+    runs-on: ubuntu-latest
+    needs: [setup, build-backend]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE: ${{ needs.setup.outputs.backend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: typelearn
+          POSTGRES_USER: typelearn
+          POSTGRES_PASSWORD: typelearn
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U typelearn -d typelearn"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run pytest inside the backend candidate
+        run: |
+          docker run --rm --network host \
+            -e DJANGO_SECRET_KEY=ci-not-secret \
+            -e POSTGRES_DB=typelearn \
+            -e POSTGRES_USER=typelearn \
+            -e POSTGRES_PASSWORD=typelearn \
+            -e POSTGRES_HOST=localhost \
+            -e POSTGRES_PORT=5432 \
+            "${IMAGE}:${TAG}-test" pytest
+
+  vitest:
+    runs-on: ubuntu-latest
+    needs: [setup, build-frontend]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE: ${{ needs.setup.outputs.frontend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run the unit suite inside the frontend test image
+        run: docker run --rm "${IMAGE}:${TAG}-test" npm run test
+
+  playwright:
+    runs-on: ubuntu-latest
+    needs: [setup, build-frontend]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE: ${{ needs.setup.outputs.frontend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # The browser suite stubs the catalog and synthesises its own audio, so it
+      # needs no database, no corpus, and no backend — which is what keeps it a
+      # fast job while the smoke test below does what only a cluster can.
+      - name: Run the browser suite inside the frontend test image
+        run: docker run --rm --ipc=host "${IMAGE}:${TAG}-test" npm run test:e2e
+
+  # Unit and browser suites never exercise the manifests, the routing, and the
+  # images together. This does, using the same bring-up a developer runs, so a
+  # broken manifest fails here rather than on someone's machine.
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [setup, build-backend, build-frontend]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      BACKEND_IMAGE: ${{ needs.setup.outputs.backend_image }}
+      FRONTEND_IMAGE: ${{ needs.setup.outputs.frontend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create the cluster
+        run: |
+          go install sigs.k8s.io/kind@v0.33.0 || curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          sudo chmod +x /usr/local/bin/kind 2>/dev/null || true
+          kind create cluster --config "$(scripts/kind-config.sh --write)"
+      # CI_PREBUILT makes the Tiltfile skip building and deploy what the cluster
+      # already has, so the smoke test runs the exact images the jobs above
+      # tested rather than a rebuild of the same source.
+      - name: Load the candidate images under the names the manifests use
+        run: |
+          docker pull "${BACKEND_IMAGE}:${TAG}"
+          docker pull "${FRONTEND_IMAGE}:${TAG}"
+          docker tag "${BACKEND_IMAGE}:${TAG}" typelearn-backend:latest
+          docker tag "${FRONTEND_IMAGE}:${TAG}" typelearn-frontend:latest
+          kind load docker-image typelearn-backend:latest --name typelearn
+          kind load docker-image typelearn-frontend:latest --name typelearn
+      - name: Install Tilt
+        run: curl -fsSL https://raw.githubusercontent.com/tilt-dev/tilt/master/scripts/install.sh | bash
+      - name: Bring the stack up
+        env:
+          CI_PREBUILT: "1"
+        run: tilt ci --timeout 15m
+      - name: Smoke test through the Gateway
+        run: |
+          SVC=$(kubectl get svc -n tigera-gateway \
+            -l gateway.envoyproxy.io/owning-gateway-name=typelearn-gateway \
+            -o jsonpath='{.items[0].metadata.name}')
+          kubectl port-forward -n tigera-gateway "svc/$SVC" 8500:80 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:8500/ >/dev/null 2>&1 && break || sleep 2; done
+          # The SPA is served at the root...
+          curl -fsS http://localhost:8500/ | grep -q 'id="app"'
+          # ...and Django answers on the same origin. An empty catalog is the
+          # right answer here: the assertion is that the stack responds, not
+          # that it holds particular exercises, so CI needs no corpus.
+          curl -fsS -X POST http://localhost:8500/graphql/ \
+            -H 'Content-Type: application/json' \
+            -d '{"query":"{ exercises { id } }"}' | grep -q '"data"'
+      - name: Tear down
+        if: always()
+        run: tilt down || true
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [setup, chart, pytest, vitest, playwright, smoke]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    env:
+      BACKEND_IMAGE: ${{ needs.setup.outputs.backend_image }}
+      FRONTEND_IMAGE: ${{ needs.setup.outputs.frontend_image }}
+      TAG: ${{ needs.setup.outputs.candidate_tag }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # A registry retag, not a rebuild: whatever passed above is exactly what
+      # becomes :latest.
+      - name: Promote the tested candidate
+        run: |
+          DATED="$(date -u '+%Y%m%d-%H%M')-${GITHUB_SHA::7}"
+          for IMAGE in "${BACKEND_IMAGE}" "${FRONTEND_IMAGE}"; do
+            docker buildx imagetools create \
+              --tag "${IMAGE}:latest" \
+              --tag "${IMAGE}:${DATED}" \
+              "${IMAGE}:${TAG}"
+          done

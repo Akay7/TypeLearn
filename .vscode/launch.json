@@ -1,39 +1,48 @@
 {
-  // Requires: the database container running (`podman-compose up -d`), a Python
-  // interpreter selected for the backend (`uv sync` puts one at src/backend/.venv,
-  // which VS Code finds on its own; a Poetry env needs picking with
-  // "Python: Select Interpreter"), and `npm install` run in src/frontend.
+  // The whole stack runs in the cluster — `tilt up`, then http://localhost:8500.
+  // Source is synced into the running pods, so an edit takes effect without
+  // anything here being pressed.
   //
-  // "App: backend + frontend" is the one to press F5 on: it starts Django, starts
-  // Vite, and opens a debuggable browser once Vite prints its URL.
+  // The debugger attaches to the backend *container*. Nothing runs on your
+  // machine: what you step through is the image a deployment runs, with its
+  // environment, its database and the Gateway in front of it, so there is no
+  // reconstruction that could differ from the real thing.
+  //
+  // Switch it on once, then bring the stack up:
+  //
+  //   echo 'export TYPELEARN_DEBUG_BACKEND=1' >> .envrc.local && direnv allow
+  //   tilt up
+  //
+  // The backend then runs under debugpy and Tilt forwards its port. Nothing
+  // waits for you — the stack serves whether or not you ever attach.
+  //
+  // Tests are the exception, and deliberately so: they run on the host, against
+  // the database `tilt up` forwards, so debugging one needs nothing from this
+  // file at all — press the debug icon beside the test. The last configuration
+  // below is never picked by hand; it only supplies the settings that press
+  // uses.
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Backend: Django server",
+      "name": "Backend: attach to the container",
       "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/src/backend/manage.py",
-      "args": ["runserver"],
-      "cwd": "${workspaceFolder}/src/backend",
-      // POSTGRES_* live in db.env, the same file the container reads.
-      "envFile": "${workspaceFolder}/db.env",
-      "django": true,
-      "justMyCode": false,
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Backend: load corpus",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/src/backend/manage.py",
-      // Ingestion takes the release directory as an argument — it is never
-      // hardcoded, so the prompt asks for it each run.
-      "args": ["load_corpus", "${input:corpusPath}"],
-      "cwd": "${workspaceFolder}/src/backend",
-      "envFile": "${workspaceFolder}/db.env",
-      "django": true,
-      "justMyCode": false,
-      "console": "integratedTerminal"
+      "request": "attach",
+      "connect": {
+        "host": "127.0.0.1",
+        // 5678 for the main checkout, 5678 + offset for a linked worktree —
+        // `scripts/worktree-env.sh offset`, the same identity as everything else.
+        "port": 5678
+      },
+      // Source is synced verbatim into /app, so the mapping is one-to-one.
+      // Without it a breakpoint set here has no counterpart the pod recognises
+      // and simply never fires.
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/backend",
+          "remoteRoot": "/app"
+        }
+      ],
+      "justMyCode": false
     },
     {
       "name": "Frontend: Vite dev server",
@@ -41,6 +50,10 @@
       "request": "launch",
       "command": "npm run dev",
       "cwd": "${workspaceFolder}/src/frontend",
+      // Runs on the host and proxies /graphql/, /media/, /admin/ and /static/ to
+      // the cluster, so the browser still sees one origin. Needs no database and
+      // no credentials — the backend it talks to is the one in the pod.
+      //
       // NO_COLOR is what makes the pattern below work: with colors on, Vite
       // wraps the URL in escape codes ("http://localhost:" then a bolded port),
       // so no regex matches it as one contiguous string and the browser never
@@ -54,20 +67,22 @@
         "action": "debugWithChrome",
         "webRoot": "${workspaceFolder}/src/frontend"
       }
-    }
-  ],
-  "compounds": [
+    },
     {
-      "name": "App: backend + frontend",
-      "configurations": ["Backend: Django server", "Frontend: Vite dev server"],
-      "stopAll": true
-    }
-  ],
-  "inputs": [
-    {
-      "id": "corpusPath",
-      "type": "promptString",
-      "description": "Path to the Common Voice release directory (e.g. .../cv-corpus-25.0-2026-03-09)"
+      // Not started from this list. "purpose": ["debug-test"] is what makes the
+      // Testing view's debug icon use it, so this is where a debugged test's
+      // settings live rather than a configuration to remember to pick.
+      //
+      // justMyCode off for the same reason as the attach configuration above: a
+      // failing test is usually explained inside Django or Strawberry, and a
+      // debugger that will not step into them stops right where the interesting
+      // part begins.
+      "name": "Backend: debug the test under the cursor",
+      "type": "debugpy",
+      "request": "launch",
+      "purpose": ["debug-test"],
+      "console": "internalConsole",
+      "justMyCode": false
     }
   ]
 }

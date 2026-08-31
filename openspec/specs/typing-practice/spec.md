@@ -82,7 +82,7 @@ The frontend SHALL tell the learner what is happening while an exercise is being
 - **THEN** a loading indication is rendered in place of the sentence
 
 #### Scenario: Backend unreachable
-- **WHEN** the exercise query fails — the backend is down, the request is blocked by CORS, or the response carries GraphQL errors
+- **WHEN** the exercise query fails — the backend is down, the request errors, or the response carries GraphQL errors
 - **THEN** a plain error message is rendered explaining that the exercise could not be loaded, and the browser console carries the underlying error
 
 #### Scenario: Empty catalog

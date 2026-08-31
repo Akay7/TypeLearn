@@ -1,0 +1,32 @@
+# The backend's configuration, one key per entry of `.Values.env`.
+#
+# Nothing here is named by the template: a backend setting is added by adding a
+# values entry, never by editing this file. That is the whole point — a setting
+# that needs a template change to introduce is a setting someone will introduce
+# somewhere else instead.
+#
+# Secrets do not pass through here. See secret.yaml.
+{{- $env := deepCopy .Values.env }}
+{{- if .Values.gateway.host }}
+  {{/*
+    The hostname the Gateway matches has to be one Django accepts, or every
+    request through it is a 400 that looks like a routing fault. Appended rather
+    than assigned, so an explicit DJANGO_ALLOWED_HOSTS keeps whatever else it
+    lists, and skipped when already present so it cannot accumulate duplicates.
+  */}}
+  {{- $hosts := splitList "," (default "" (get $env "DJANGO_ALLOWED_HOSTS")) }}
+  {{- if not (has .Values.gateway.host $hosts) }}
+    {{- $_ := set $env "DJANGO_ALLOWED_HOSTS" (append (compact $hosts) .Values.gateway.host | join ",") }}
+  {{- end }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-env
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := $env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

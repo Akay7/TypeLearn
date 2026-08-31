@@ -1,0 +1,63 @@
+{{- if .Values.ingest.enabled }}
+{{- $corpus := .Values.env.CORPUS_PATH | default "/corpus" }}
+# Ingestion: read a Common Voice release in place and copy the selected clips
+# into the media volume.
+#
+# A plain Job, deliberately not a Helm hook. A hook would run on every upgrade,
+# and this takes minutes and writes into storage every worktree reads — an
+# upgrade is exactly when nobody asked for it. So it renders only when asked
+# for, and never as a side effect of a release.
+#
+# The Job's spec is immutable once created, so re-running means deleting it
+# first. The Tiltfile's button does that; a `helm upgrade` will not.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ingest
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  # Keep the pod after it finishes so its log can still be read.
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "typelearn.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: ingest
+          image: {{ include "typelearn.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - 'python manage.py load_corpus "${CORPUS_PATH:-/corpus}"'
+          envFrom:
+            {{- include "typelearn.envFrom" . | nindent 12 }}
+          env:
+            {{- include "typelearn.databaseEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: media
+              mountPath: {{ .Values.env.MEDIA_ROOT | default "/app/media" }}
+            - name: corpus
+              mountPath: {{ $corpus }}
+              readOnly: true
+      volumes:
+        {{- include "typelearn.mediaVolume" . | nindent 8 }}
+        # The corpus is read in place and never enters an image: in development
+        # kind mounts the host's release directory onto the node, and this
+        # mounts it into the pod read-only.
+        - name: corpus
+          hostPath:
+            path: {{ required "ingest.enabled needs ingest.corpusHostPath — the corpus directory as the node sees it" .Values.ingest.corpusHostPath }}
+            type: Directory
+{{- end }}

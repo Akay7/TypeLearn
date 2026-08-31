@@ -1,10 +1,9 @@
 # Downloaded corpus, generated datasets, and copied media
 data/
 
-# Credentials
-db.env
+# Credentials. A safety net for any *.env a tool drops here; the tracked
+# examples are named the other way round (.env.example) and are not matched.
 *.env
-!*.example.env
 
 # Python
 __pycache__/
@@ -30,3 +29,20 @@ dist-ssr/
 # Editors and OS
 .DS_Store
 *.swp
+
+# Local configuration, read by the cluster and by host-run management commands.
+.env
+
+# Tilt scratch: the generated chart values and kind config. Also listed in
+# .tiltignore, because Tilt watches the values files it renders from and would
+# otherwise reload in a loop on its own output.
+.tilt/
+
+# Linked worktrees live inside the repository, so they travel with it and are
+# easy to find. Each is a full checkout, so it must never be seen as content of
+# the checkout containing it — by git here, or by Tilt in .tiltignore.
+.worktrees/
+
+# direnv: .envrc is committed (it pins the container runtime for everyone);
+# only the per-checkout override is ignored.
+.envrc.local

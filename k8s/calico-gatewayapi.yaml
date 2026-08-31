@@ -1,0 +1,8 @@
+# Turning this on is what makes the Tigera Operator provision a GatewayClass —
+# `tigera-gateway-class` — for the project's Gateway to bind to. Cluster-scoped
+# and shared by every worktree, so the Tiltfile installs it only when missing.
+apiVersion: operator.tigera.io/v1
+kind: GatewayAPI
+metadata:
+  name: default
+spec: {}

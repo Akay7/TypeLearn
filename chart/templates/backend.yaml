@@ -1,0 +1,146 @@
+# Django + Strawberry, reached through the Gateway at /graphql/, /media/,
+# /admin/, and /static/.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+    {{- include "typelearn.selectorLabels" (dict "component" "backend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "typelearn.selectorLabels" (dict "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "typelearn.labels" . | nindent 8 }}
+        {{- include "typelearn.selectorLabels" (dict "component" "backend") | nindent 8 }}
+      annotations:
+        # Roll the pods when configuration changes. Without this an edit to
+        # values that only touches the ConfigMap leaves the running pods on the
+        # old environment until something else happens to restart them.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if and (not .Values.existingSecret) .Values.secrets }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.backend.migrate.enabled }}
+      initContainers:
+        # Migrations are an admin step, run before the application serves rather
+        # than from inside it. The retry loop is not defensive padding: a
+        # database still bootstrapping is the expected state at first start, not
+        # a failure. After the retries a final attempt surfaces a real migration
+        # error instead of looping on it forever.
+        - name: migrate
+          image: {{ include "typelearn.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              for i in $(seq 1 {{ .Values.backend.migrate.retries }}); do
+                python manage.py migrate --noinput && exit 0
+                echo "waiting for postgres ($i)..."; sleep {{ .Values.backend.migrate.retryDelaySeconds }}
+              done
+              python manage.py migrate --noinput
+          envFrom:
+            {{- include "typelearn.envFrom" . | nindent 12 }}
+          env:
+            {{- include "typelearn.databaseEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: media
+              mountPath: {{ .Values.env.MEDIA_ROOT | default "/app/media" }}
+      {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "typelearn.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.backend.debug.enabled }}
+          # Under a debugger: Django's own server, single-process, so a
+          # breakpoint in request handling is in the process the debugger is
+          # attached to. --noreload for the same reason — the reloader's child
+          # would be a second process.
+          command:
+            - python
+            - -m
+            - debugpy
+            - --listen
+            - 0.0.0.0:{{ .Values.backend.debug.port }}
+            - manage.py
+            - runserver
+            - 0.0.0.0:8000
+            - --noreload
+          {{- else }}
+          {{- with .Values.backend.command }}
+          # Set only by development, which adds --reload so synced source takes
+          # effect without a pod restart. Left empty the image's own CMD runs.
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8000
+            {{- if .Values.backend.debug.enabled }}
+            - name: debug
+              containerPort: {{ .Values.backend.debug.port }}
+            {{- end }}
+          envFrom:
+            {{- include "typelearn.envFrom" . | nindent 12 }}
+          env:
+            {{- include "typelearn.databaseEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: media
+              mountPath: {{ .Values.env.MEDIA_ROOT | default "/app/media" }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.probePath }}
+              port: http
+              # Django checks Host against ALLOWED_HOSTS, and a probe arrives at
+              # the pod's IP. Sending a fixed Host is what lets a deployment keep
+              # a restrictive ALLOWED_HOSTS instead of the wildcard that would
+              # otherwise be needed just to satisfy kubelet.
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.backend.probeHost | quote }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.probePath }}
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ .Values.backend.probeHost | quote }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- include "typelearn.mediaVolume" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "typelearn.selectorLabels" (dict "component" "backend") | nindent 4 }}
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

@@ -1,0 +1,83 @@
+# Backend image: Django + Strawberry, served by gunicorn.
+#
+# Staged so uv never reaches the shipped image: the builder resolves the locked
+# dependencies into a virtualenv and the runtime copies just that venv, keeping
+# what ships to Python plus the packages the application imports.
+#
+# `dev` adds the test dependencies on top. Development and CI run that one — a
+# pod whose image has no pytest cannot run the test suite, and CI must run the
+# suite inside the artifact it built rather than a separately assembled
+# environment. The production overlay uses `runtime`.
+#
+# Nothing environment-specific is baked in — no corpus, no media, no settings,
+# no secrets. The corpus is mounted where it is needed, MEDIA_ROOT is a volume,
+# and configuration arrives through the environment.
+
+# ---- builder ---------------------------------------------------------------
+FROM python:3.13-slim AS builder
+
+# UV_LINK_MODE=copy: the cache sits on a different layer from /app, where a
+# hardlink cannot reach, so uv would warn on every sync and fall back anyway.
+# UV_PROJECT_ENVIRONMENT names the venv path explicitly, because the runtime
+# stage below copies exactly that path out of this one.
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    UV_LINK_MODE=copy \
+    UV_CACHE_DIR=/tmp/uv-cache \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
+
+# Pinned: an unpinned installer is an unpinned build, however locked the
+# dependencies it installs are.
+RUN pip install --no-cache-dir uv==0.12.6
+
+WORKDIR /app
+
+# Lockfile first: dependencies change far less often than source, so this layer
+# survives most rebuilds.
+COPY pyproject.toml uv.lock ./
+# --locked fails the build if the lockfile has drifted from pyproject rather than
+# quietly resolving something new, so a forgotten `uv lock` is caught here and
+# not in whatever the image turns out to contain.
+RUN uv sync --locked --no-dev && rm -rf "$UV_CACHE_DIR"
+
+# ---- runtime (what a deployment runs) --------------------------------------
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+# A non-root user, as production would run. The development media directory is
+# made group/other-writable by the bring-up instead of this image running as
+# root: rootless container runtimes map container root to the host user, so
+# running as root here would silently change who owns the files on the host.
+# /app is owned by that user, not by root. WORKDIR would create it root-owned,
+# and `COPY --chown` sets the ownership of what is copied, not of the directory
+# it lands in — so the application's own files would be writable while the
+# directory holding them was not. Tilt's live update extracts a tar into /app,
+# which means unlinking and recreating files, which needs write permission on
+# the directory: without this, every synced backend edit fails with a permission
+# error and the pod keeps serving the code from the image.
+RUN useradd --create-home --uid 1000 app && mkdir -p /app && chown app:app /app
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --chown=app:app . .
+
+USER app
+
+EXPOSE 8000
+
+# Overridden in development to add --reload; the image default is the one a
+# deployment would use.
+CMD ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+# ---- dev (what development and CI run) -------------------------------------
+# The same image plus the dev dependency group, so `pytest` exists in the pod
+# and in the CI container. Nothing else differs: same Python, same code, same
+# entrypoint.
+FROM builder AS dev-builder
+RUN uv sync --locked && rm -rf "$UV_CACHE_DIR"
+
+FROM runtime AS dev
+COPY --from=dev-builder --chown=app:app /app/.venv /app/.venv

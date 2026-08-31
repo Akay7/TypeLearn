@@ -37,9 +37,10 @@ over 150 languages. This app turns that raw data into structured practice.
 
 ### Cannot build yet
 - User accounts or progress saving
-- Docker files or deployment infrastructure
-  (Podman + `podman-compose.yml` for the local PostgreSQL container *is* in scope —
-  it is local development, not deployment)
+- Deploying anywhere
+  (the local kind cluster and the Helm chart that describes the stack *are* in
+  scope — they are how development runs; an actual target cluster, DNS, and a
+  certificate issuer are not)
 - Ratings or user feedback systems
 - Multi-language switching
 - Mobile responsive design

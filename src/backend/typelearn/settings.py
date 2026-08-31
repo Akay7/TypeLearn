@@ -29,7 +29,14 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() != 'false'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# The Gateway forwards the browser's Host header, and in-cluster probes arrive
+# on the pod IP, so the list has to come from the environment rather than name
+# the two loopback spellings a host-run runserver used to see.
+ALLOWED_HOSTS = [
+    host
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if host
+]
 
 
 # Application definition
@@ -41,14 +48,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
     'exercises',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -57,21 +62,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'typelearn.urls'
-
-
-# Cross-origin requests
-# The Vite dev server is a different origin than Django, so the frontend's
-# GraphQL POST is a CORS request. Both spellings of the loopback host are
-# allowed because CORS matches the origin string literally.
-
-CORS_ALLOWED_ORIGINS = [
-    origin
-    for origin in os.environ.get(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173',
-    ).split(',')
-    if origin
-]
 
 TEMPLATES = [
     {
@@ -148,7 +138,9 @@ STATIC_URL = 'static/'
 
 MEDIA_URL = '/media/'
 
-MEDIA_ROOT = BASE_DIR / 'media'
+# A volume in the cluster, and a directory beside the code when a management
+# command runs on the host. Either way the clips live outside the image.
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
 
 
 # Email
