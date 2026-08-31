@@ -177,6 +177,15 @@ local("mkdir -p data/media/clips && chmod 0777 data/media data/media/clips || tr
 # artifact CI tested, with no rebuild between testing and running.
 CI_PREBUILT = os.getenv("CI_PREBUILT", "")
 
+# The two stages differ by more than their contents: `build` runs Vite's dev
+# server on 5173, `serve` runs nginx on 80, and the chart's probe follows the
+# mode it is given. CI loads the candidate a deployment would run — the `serve`
+# stage — so rendering it in dev mode probes a port that image never opens, and
+# the pod stays unready until `tilt ci` times out. Follow the image instead: CI
+# smoke-tests the frontend exactly as it ships, and a developer, whose Tilt
+# builds the `build` stage below, still gets the dev server and hot reload.
+FRONTEND_MODE = "serve" if CI_PREBUILT else "dev"
+
 if not CI_PREBUILT:
     docker_build(
         "typelearn-backend",
@@ -273,8 +282,9 @@ DEV_VALUES = {
         "debug": {"enabled": DEBUG_BACKEND, "port": 5678},
     },
     # The dev server, and the port the browser really reaches the Gateway on so
-    # Vite's HMR websocket connects.
-    "frontend": {"mode": "dev", "hmrClientPort": str(PORT)},
+    # Vite's HMR websocket connects — except in CI, which loaded the `serve`
+    # stage: see FRONTEND_MODE.
+    "frontend": {"mode": FRONTEND_MODE, "hmrClientPort": str(PORT)},
     # pytest-django creates and drops its own test database on every run.
     "postgres": {"allowCreateDatabase": True},
     # The node path kind mounts the host's media directory onto, shared by every
