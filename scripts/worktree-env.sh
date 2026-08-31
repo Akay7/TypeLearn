@@ -1,7 +1,8 @@
 #!/bin/sh
-# Resolve this git worktree's identity — slug, Kubernetes namespace, and host
-# port — so that several checkouts can run their stacks at once against one
-# cluster without any of them being edited to avoid a collision.
+# Resolve this git worktree's identity — slug, Kubernetes namespace, the host
+# port the application is served on, and the host port Tilt's own UI listens on
+# — so that several checkouts can run their stacks at once against one cluster
+# without any of them being edited to avoid a collision.
 #
 # This script is the single source of truth. The Tiltfile sources these values
 # rather than re-deriving them, and anything else that needs to know where a
@@ -14,21 +15,22 @@
 #   namespace = "default"                 | "typelearn-<slug>"
 #   offset    = WORKTREE_OFFSET | 0 (for "default") | cksum(slug) % 50 + 1
 #   port      = GATEWAY_PORT    | 8500 + offset
+#   tilt-port = TILT_PORT       | 10350 + offset
 #
-# The Gateway is the only host port the application uses — the database is
-# reached from inside the cluster — and it is the one that moves per worktree, so
-# several stacks can serve at once.
-#
-# Tilt's own UI is deliberately not derived here: it stays on its default 10350
-# for every worktree, because it is the tool you have open rather than something
-# the project serves, and a URL that moved with the checkout would be a bookmark
-# that is wrong most of the time.
+# The Gateway is the host port the application is served on; the database is
+# reached from inside the cluster and exposes none. Both the Gateway port and
+# Tilt's own UI port move with the offset, so several worktrees can serve their
+# stacks and keep their Tilts attached at the same time — a detached Tilt stops
+# syncing source into its worktree's pods, so it is not the tool you merely have
+# open, it is part of the running stack. The main checkout (offset 0) keeps
+# Tilt's default 10350, so a bare clone with no worktrees sees no change.
 #
 # Usage:
 #   worktree-env.sh slug        # "default" or e.g. "add-session-summary"
 #   worktree-env.sh namespace   # "default" or "typelearn-<slug>"
 #   worktree-env.sh offset      # 0 for the main checkout, else 1..50
 #   worktree-env.sh port        # the Gateway's host port
+#   worktree-env.sh tilt-port   # the host port Tilt's UI listens on
 #   worktree-env.sh export      # WT_SLUG=… WT_NAMESPACE=… … for `eval`
 #   worktree-env.sh sanitize X  # reduce an arbitrary value to a slug label
 set -eu
@@ -85,15 +87,17 @@ else
 	NAMESPACE="typelearn-$SLUG"
 fi
 OFFSET=$(resolve_offset "$SLUG")
-# The base ends in 00 and the offset stays under 100, so the last two digits of
-# the port name the worktree, and the main checkout gets the bare 8500.
+# Both bases end in 00 and the offset stays under 100, so the last two digits of
+# each port name the worktree, and the main checkout gets the bare 8500 / 10350.
 PORT=${GATEWAY_PORT:-$(( 8500 + OFFSET ))}
+TILT_PORT=${TILT_PORT:-$(( 10350 + OFFSET ))}
 
 case "${1:-export}" in
 	slug) printf '%s\n' "$SLUG" ;;
 	namespace) printf '%s\n' "$NAMESPACE" ;;
 	offset) printf '%s\n' "$OFFSET" ;;
 	port) printf '%s\n' "$PORT" ;;
-	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" ;;
-	*) echo "usage: $0 {slug|namespace|offset|port|export|sanitize <value>}" >&2; exit 2 ;;
+	tilt-port) printf '%s\n' "$TILT_PORT" ;;
+	export) printf 'WT_SLUG=%s WT_NAMESPACE=%s WT_OFFSET=%s WT_PORT=%s WT_TILT_PORT=%s\n' "$SLUG" "$NAMESPACE" "$OFFSET" "$PORT" "$TILT_PORT" ;;
+	*) echo "usage: $0 {slug|namespace|offset|port|tilt-port|export|sanitize <value>}" >&2; exit 2 ;;
 esac
