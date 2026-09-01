@@ -88,6 +88,10 @@ Type text on the virtual keyboard, see it appear in an input field.
 - [x] Input field reflects `typed` value in real time
 - [x] Physical-keyboard input updates the same state
 
+> Since renamed. `OnScreenKeyboard` renders whichever layout it is handed, on a
+> board it knows nothing about; Kedmanee is one layout among the several this is
+> now shaped for. See `src/frontend/src/lib/keyboard/`.
+
 ### M7: Validation — done
 
 Compare typed text against the target exercise sentence and show result.

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { compare, dropLast, isComplete } from '../lib/checking'
+import { layoutFor, layoutsAvailable, withoutUnreachable } from '../lib/keyboard'
 
 // A path, never a URL. The application is served from one origin in every
 // environment — behind the Gateway in the cluster and in a deployment, and
@@ -49,7 +50,50 @@ export const useExerciseStore = defineStore('exercise', () => {
   // null until the learner checks; then 'correct' or 'incorrect'.
   const result = ref(null)
 
-  const current = computed(() => deck.value[index.value] ?? null)
+  /** The exercise as it was ingested, before the keyboard has its say. */
+  const ingested = computed(() => deck.value[index.value] ?? null)
+
+  /**
+   * The keyboard the exercise is practised on, chosen by its language.
+   *
+   * Nothing carries a language yet, so this is Kedmanee for every exercise —
+   * see `lib/keyboard/index.js` for why that question is still open. The
+   * selection happens here because this is where the exercise is, and because
+   * the correction below has to be made against the same layout the learner is
+   * looking at.
+   */
+  const layout = computed(() => layoutFor(ingested.value?.language))
+
+  /**
+   * The exercise being practised, with only the characters no keyboard at all
+   * can produce removed.
+   *
+   * Almost nothing is removed. A `!` stays, though Kedmanee has no key for it,
+   * because the keyboard reaches it the way a Thai typist does — by switching
+   * to the Latin layout — and a sentence shown differently from the one that
+   * was ingested is a worse answer than a keyboard that switches. What goes is
+   * only what is on no board this application has: an emoji, a CJK character,
+   * a typographic dash.
+   *
+   * Still at presentation rather than in the catalog: the stored sentence stays
+   * as the corpus wrote it, and registering another layout takes effect on the
+   * next page load instead of needing every exercise re-ingested.
+   *
+   * Here rather than at each call site, so the sentence on screen, the length
+   * hint, the check, the completion trigger and the keyboard's highlight are
+   * one string. A version corrected for checking but not for display would ask
+   * the learner to type a character that is on screen and on no key.
+   */
+  const current = computed(() => {
+    if (!ingested.value) {
+      return null
+    }
+
+    return {
+      ...ingested.value,
+      sentence: withoutUnreachable(ingested.value.sentence, layoutsAvailable(layout.value)),
+    }
+  })
 
   // Held so that whatever advances first — the timer or a later call to next()
   // — is the only advance that happens.
@@ -84,7 +128,19 @@ export const useExerciseStore = defineStore('exercise', () => {
         throw new Error(body.errors[0].message)
       }
 
-      deck.value = shuffle([...body.data.exercises])
+      // An exercise whose sentence holds nothing any keyboard can type is not
+      // an exercise: presented, it would be complete before the learner typed
+      // anything. Dropped here rather than hidden later, so the deck is the
+      // list of things there are to practise.
+      const practisable = body.data.exercises.filter(
+        (exercise) =>
+          withoutUnreachable(
+            exercise.sentence,
+            layoutsAvailable(layoutFor(exercise.language)),
+          ) !== '',
+      )
+
+      deck.value = shuffle(practisable)
       index.value = 0
       typed.value = ''
       result.value = null
@@ -155,5 +211,18 @@ export const useExerciseStore = defineStore('exercise', () => {
     result.value = null
   }
 
-  return { deck, index, current, status, typed, result, load, append, backspace, check, next }
+  return {
+    deck,
+    index,
+    current,
+    layout,
+    status,
+    typed,
+    result,
+    load,
+    append,
+    backspace,
+    check,
+    next,
+  }
 })

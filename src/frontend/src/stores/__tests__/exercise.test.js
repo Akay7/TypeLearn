@@ -146,3 +146,97 @@ describe('checking on demand', () => {
     expect(store.result).toBe(null)
   })
 })
+
+describe('the sentence the learner is asked for', () => {
+  it('keeps a character Kedmanee cannot type but the Latin layout can', () => {
+    // `!` is not on a Thai keyboard. The keyboard reaches it the way a Thai
+    // typist does — by switching layout — so the sentence is left alone.
+    const store = storeWithDeck(['สวัสดี!'])
+
+    expect(store.current.sentence).toBe('สวัสดี!')
+  })
+
+  it('lets that exercise be completed and judged correct', async () => {
+    const store = storeWithDeck(['สวัสดี!'])
+
+    await type(store, 'สวัสดี!')
+
+    expect(store.result).toBe('correct')
+  })
+
+  it('removes only what is on no keyboard at all', () => {
+    // An emoji is on no board this application has, so there is no keystroke
+    // to ask for and nothing a layout switch could reach.
+    const store = storeWithDeck(['สวัสดี 🙂'])
+
+    expect(store.current.sentence).toBe('สวัสดี')
+  })
+
+  it('leaves the ingested sentence alone', () => {
+    // The correction belongs to the exercise being presented, not to the
+    // catalog: what was ingested stays as the corpus wrote it.
+    const store = storeWithDeck(['สวัสดี 🙂'])
+
+    expect(store.deck[0].sentence).toBe('สวัสดี 🙂')
+  })
+
+  it('carries everything else about the exercise through unchanged', () => {
+    const store = storeWithDeck(['สวัสดี!'])
+
+    expect(store.current.id).toBe('0')
+    expect(store.current.audioUrl).toBe('/clip-0.mp3')
+  })
+})
+
+describe('loading the catalog', () => {
+  function respondWith(exercises) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { exercises } }),
+      }),
+    )
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps an exercise the Latin layout can type', async () => {
+    // Reachable by switching layout, so it is a perfectly good exercise.
+    respondWith([
+      { id: '1', sentence: 'hello!', audioUrl: '/1.mp3', difficulty: 1 },
+      { id: '2', sentence: 'สวัสดี', audioUrl: '/2.mp3', difficulty: 1 },
+    ])
+
+    const store = useExerciseStore()
+    await store.load()
+
+    expect(store.deck.map((exercise) => exercise.id).sort()).toEqual(['1', '2'])
+  })
+
+  it('leaves out an exercise no keyboard can type at all', async () => {
+    // Presented, it would be complete before the learner typed anything.
+    respondWith([
+      { id: '1', sentence: '🙂🙂', audioUrl: '/1.mp3', difficulty: 1 },
+      { id: '2', sentence: 'สวัสดี', audioUrl: '/2.mp3', difficulty: 1 },
+    ])
+
+    const store = useExerciseStore()
+    await store.load()
+
+    expect(store.deck.map((exercise) => exercise.id)).toEqual(['2'])
+    expect(store.status).toBe('ready')
+  })
+
+  it('reports an empty catalog when nothing survives', async () => {
+    respondWith([{ id: '1', sentence: '🙂', audioUrl: '/1.mp3', difficulty: 1 }])
+
+    const store = useExerciseStore()
+    await store.load()
+
+    expect(store.status).toBe('empty')
+    expect(store.current).toBeNull()
+  })
+})

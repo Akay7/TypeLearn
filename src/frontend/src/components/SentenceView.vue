@@ -3,7 +3,7 @@ import { computed } from 'vue'
 
 import AnswerInput from './AnswerInput.vue'
 import AudioPlayer from './AudioPlayer.vue'
-import ThaiKeyboard from './ThaiKeyboard.vue'
+import OnScreenKeyboard from './OnScreenKeyboard.vue'
 import { useExerciseStore } from '../stores/exercise'
 
 const store = useExerciseStore()
@@ -49,7 +49,8 @@ const characterCount = computed(() =>
 
       <AnswerInput />
 
-      <ThaiKeyboard />
+      <!-- The layout the exercise is practised on, chosen by its language. -->
+      <OnScreenKeyboard :layout="store.layout" />
     </template>
   </section>
 </template>
