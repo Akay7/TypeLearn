@@ -11,9 +11,12 @@ frontend — on a local `kind` cluster driven by Tilt, rather than a mixture of 
 container and two host processes. A single command SHALL bring the stack up, and
 a developer SHALL NOT have to start the backend or the frontend by hand.
 
-The images SHALL be built into the same container runtime that hosts the cluster,
-and the project SHALL pin that runtime rather than inherit whichever one the
-developer's shell happens to name.
+The images SHALL be built into the same container runtime that hosts the cluster.
+The project SHALL NOT dictate which runtime that is; naming one side SHALL be
+enough, with the project supplying the other, so the two cannot be left
+half-configured. Bring-up SHALL refuse both a split runtime and a cluster that is
+not this project's, rather than deploying into whichever one the developer's
+tooling currently selects.
 
 #### Scenario: Starting the stack
 - **WHEN** a developer runs `tilt up` in a checkout
@@ -38,12 +41,16 @@ developer's shell happens to name.
 - **THEN** the audio clips under `MEDIA_ROOT` are still present, because the
   directory is a persistent volume rather than container-local storage
 
-#### Scenario: The runtime is pinned by the checkout
-- **WHEN** a developer whose shell prefers a different container runtime works in
-  this checkout
-- **THEN** the project's own environment settles which runtime is used, so the
-  stack comes up without the developer editing anything, or having to know the
-  choice was made
+#### Scenario: Either runtime works, named once
+- **WHEN** a developer names one side of the container runtime — the builder or
+  the cluster provider — and leaves the other unset
+- **THEN** the project supplies the other side to match, so the stack comes up on
+  the runtime they chose without them configuring it twice
+
+#### Scenario: No runtime is imposed
+- **WHEN** a developer names neither side
+- **THEN** the default runtime is used for both, and nothing in the project
+  overrides a preference they did express
 
 #### Scenario: A split runtime is refused rather than tolerated
 - **WHEN** the runtime the images are built into and the runtime hosting the
@@ -51,12 +58,20 @@ developer's shell happens to name.
 - **THEN** bring-up stops immediately and names both sides, rather than building
   successfully and surfacing much later as an image the cluster cannot pull
 
+#### Scenario: The wrong cluster is refused
+- **WHEN** bring-up is run while the developer's tooling points at a cluster that
+  is not this project's
+- **THEN** it stops and names both the selected cluster and the expected one,
+  rather than deploying this stack into someone else's
+
 ### Requirement: The application is served from one origin
-The frontend and the backend SHALL be reached through a single origin in local
-development, as they are in a deployment. A Gateway SHALL route the backend's
-paths to the backend and everything else to the frontend. Consequently the
-backend SHALL NOT carry any cross-origin configuration: local development must
-not be the only environment where CORS is needed.
+The frontend and the backend SHALL be reached through a single origin, in a
+deployment and in every way the application is run locally — including a dev
+server running on the host outside the cluster. A Gateway SHALL route the
+backend's paths to the backend and everything else to the frontend; a host dev
+server SHALL proxy those same paths for the same reason. Consequently the backend
+SHALL NOT carry any cross-origin configuration: no way of running this
+application may be the only one where CORS is needed.
 
 #### Scenario: One origin serves both
 - **WHEN** the application is opened at the Gateway's address
@@ -78,6 +93,95 @@ not be the only environment where CORS is needed.
   Django admin, or Django's static files
 - **THEN** the Gateway routes it to the backend, while every other path falls
   through to the frontend
+
+#### Scenario: A dev server on the host is also one origin
+- **WHEN** the frontend is served from a dev server on the host and queries the
+  catalog
+- **THEN** the request goes to that same dev server's origin, which forwards it
+  to the backend, so the browser again sends no preflight and receives no CORS
+  headers
+
+#### Scenario: The frontend addresses the backend by path, never by URL
+- **WHEN** the address the frontend uses for the API is read, in any environment
+  and including its built-in default
+- **THEN** it is a path on the current origin, so no configuration can point the
+  application at a second origin
+
+### Requirement: The frontend can run on the host against the running stack
+A developer SHALL be able to run the frontend's dev server on the host while the
+rest of the stack runs in the cluster, and SHALL get the real catalog and the
+real audio without a second backend, a database, or any credential. That path
+SHALL preserve the single origin rather than trading it away for convenience.
+
+#### Scenario: Real data with nothing else set up
+- **WHEN** the dev server is started on the host while the stack is up
+- **THEN** it serves the application, and the catalog and audio come from the
+  running backend, with no setup beyond having brought the stack up
+
+#### Scenario: Still one origin
+- **WHEN** the page served from the host queries the catalog or loads a clip
+- **THEN** the request goes to that same dev server's origin, which forwards it,
+  so the browser sends no preflight and no response carries a CORS header
+
+#### Scenario: The dev server advertises no cross-origin access
+- **WHEN** any response from the host dev server is inspected
+- **THEN** it carries no `Access-Control-Allow-Origin`, because nothing needs one
+  and a development-only permission is one an application comes to depend on
+
+### Requirement: The backend is debugged where it runs
+A debugger SHALL attach to the backend as it runs in the cluster, rather than to
+a copy of the application assembled on a developer's machine. What is stepped
+through is then the image a deployment runs, with its environment, its database
+and its routing — nothing is reconstructed, so nothing about the reconstruction
+can differ from the real thing.
+
+#### Scenario: Attaching to the running backend
+- **WHEN** a developer switches debugging on and brings the stack up
+- **THEN** the backend accepts a debugger, and a breakpoint in request handling
+  is reached by a request that arrives through the Gateway
+
+#### Scenario: The stack does not wait for a debugger
+- **WHEN** debugging is switched on and no debugger ever attaches
+- **THEN** the stack comes up and serves normally, because a pod that blocks
+  until someone attaches is a stack that looks broken to everyone else
+
+#### Scenario: Off by default
+- **WHEN** the stack is brought up without asking for debugging
+- **THEN** the backend runs as it otherwise would, and no debug port exists
+
+#### Scenario: Breakpoints correspond to the running code
+- **WHEN** a breakpoint is set in the editor
+- **THEN** it maps to the same file in the container, because source is synced
+  there verbatim — a mapping that is stated rather than assumed, since a wrong
+  one produces a breakpoint that never fires and reports nothing
+
+#### Scenario: A debugger port is not a service
+- **WHEN** debugging is switched on
+- **THEN** the only thing it additionally exposes is the debugger's own attach
+  port; it opens no route to the application's services, so what a running
+  worktree exposes to the host is otherwise unchanged
+
+#### Scenario: No application runs on the host
+- **WHEN** a developer debugs the backend
+- **THEN** nothing about the application is run on their machine: the process
+  being stepped through is the one in the pod, so debugging needs no second copy
+  of the backend and no database of its own
+
+### Requirement: Backend tests run where they are judged
+The backend test run that gates a change SHALL happen in the cluster, against the
+real database and inside the image that was built, which is where CI runs it. A
+host arrangement MAY exist for the editor's benefit — collecting, navigating and
+debugging individual tests against the forwarded database — but SHALL NOT be the
+run a change is judged by.
+
+#### Scenario: Running the suite
+- **WHEN** a developer runs the backend tests to judge a change
+- **THEN** they run in the pod, against the real database, as CI runs them
+
+#### Scenario: The editor does not pretend otherwise
+- **WHEN** the editor's test integration is configured
+- **THEN** it is for collecting, navigating and debugging individual tests, and
+  says plainly that the run which gates a change belongs in the cluster
 
 ### Requirement: Audio is stored once for the whole cluster
 The clips under `MEDIA_ROOT` SHALL live on one store shared by every worktree,
@@ -127,13 +231,13 @@ ingesting again.
 Several git worktrees of this repository SHALL be able to run their stacks at the
 same time against one cluster, without any of them being edited to avoid a
 collision. Each worktree's identity SHALL be derived automatically, and SHALL
-determine both the Kubernetes namespace it deploys into and the host port the
-application is reached on.
+determine the Kubernetes namespace it deploys into, the host port the
+application is reached on, and the host port Tilt's own web UI listens on.
 
 #### Scenario: The main checkout is unchanged
 - **WHEN** `tilt up` runs in the main checkout
-- **THEN** it deploys to the default namespace on the base host port, so the
-  common case needs no configuration
+- **THEN** it deploys to the default namespace on the base host port, with Tilt's
+  UI on its base port, so the common case needs no configuration
 
 #### Scenario: A linked worktree gets its own namespace and port
 - **WHEN** `tilt up` runs in a linked git worktree
@@ -164,23 +268,23 @@ application is reached on.
 - **THEN** every test in the run reaches the database, rather than the run
   failing after the first connection closes
 
-#### Scenario: The tool's own UI does not move
-- **WHEN** several worktrees are running at once
-- **THEN** Tilt's UI is reached at one unchanging address for all of them and
-  only the application's port varies, because the UI is the tool the developer
-  keeps open rather than something the project serves
+#### Scenario: Every worktree's Tilt can attach at once
+- **WHEN** two worktrees have both been brought up with `tilt up`
+- **THEN** each worktree's Tilt serves its UI on its own host port, so both stay
+  attached and keep syncing source into their pods, and neither `tilt up` fails
+  to bind its port
 
 #### Scenario: One definition of the mapping
-- **WHEN** the namespace or port for a worktree is needed by Tilt or by any
-  editor task or script
+- **WHEN** the namespace, the application port, or Tilt's web port for a worktree
+  is needed by Tilt or by any editor task or script
 - **THEN** all of them obtain it from a single shared derivation, so no two
   callers can disagree about where a worktree's stack lives
 
 #### Scenario: The identity can be overridden
 - **WHEN** a developer sets the worktree slug or port offset explicitly in the
   environment
-- **THEN** that value is used instead of the derived one, so a predictable port
-  can be pinned
+- **THEN** that value is used instead of the derived one, so a predictable
+  application port, namespace, and Tilt port can be pinned together
 
 #### Scenario: Pinning an identity does not dirty the checkout
 - **WHEN** a worktree pins its own slug or offset

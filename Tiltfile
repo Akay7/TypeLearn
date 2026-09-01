@@ -217,6 +217,17 @@ if not CI_PREBUILT:
             sync("./src/frontend/src", "/app/src"),
             sync("./src/frontend/index.html", "/app/index.html"),
             sync("./src/frontend/vite.config.js", "/app/vite.config.js"),
+            # The suites the buttons below run live in the pod too, so a spec is
+            # edited and re-run without a rebuild. Without these two lines a
+            # change to either forces a full image build — Tilt's fallback for a
+            # file in the context that no sync claims — which is a minute of
+            # waiting to re-run a test that takes ten seconds.
+            #
+            # Note what a sync cannot do: it copies, it never deletes. A spec
+            # file removed here stays in the pod and keeps being run until the
+            # next full rebuild.
+            sync("./src/frontend/e2e", "/app/e2e"),
+            sync("./src/frontend/playwright.config.js", "/app/playwright.config.js"),
         ],
     )
 
@@ -455,6 +466,49 @@ cmd_button(
     text="Run backend tests",
     icon_name="science",
     argv=in_backend_pod('kubectl exec -n %s "$POD" -- pytest' % NAMESPACE),
+)
+
+# The frontend's suites run in the pod for the reason the backend's do: the
+# environment they run in is the image that ships, not one assembled on a
+# developer's machine. The `build` stage carries node_modules and the Playwright
+# browser, so both have everything they need already.
+def in_frontend_pod(script):
+    return [
+        "sh", "-c",
+        """
+        POD=$(kubectl get pod -n %s -l app=frontend -o jsonpath='{.items[0].metadata.name}')
+        %s
+        """ % (NAMESPACE, script),
+    ]
+
+cmd_button(
+    "frontend:vitest",
+    resource="frontend",
+    text="Run frontend tests",
+    icon_name="science",
+    argv=in_frontend_pod('kubectl exec -n %s "$POD" -- npm run test' % NAMESPACE),
+)
+
+# Two flags, both of which the suite needs *here* and nowhere else.
+#
+# E2E_PORT points Playwright at the dev server this pod is already running, so
+# it reuses that rather than starting a second one. Starting a second Vite in
+# the container exhausts its thread limit before a single test runs, and what
+# that looks like is not "too many threads" but every test failing with a
+# browser that closed — an hour of looking in the wrong place.
+#
+# --workers=1 because the parallel default runs one Chromium per core, and this
+# container cannot carry them: the run dies partway through with SIGKILL. The
+# whole suite takes about ten seconds serialised, so there is nothing to win by
+# fixing it.
+cmd_button(
+    "frontend:playwright",
+    resource="frontend",
+    text="Run browser tests",
+    icon_name="travel_explore",
+    argv=in_frontend_pod(
+        'kubectl exec -n %s "$POD" -- env E2E_PORT=5173 npx playwright test --workers=1' % NAMESPACE
+    ),
 )
 
 # Ingestion reads the corpus mounted by k8s/kind.yaml and writes the selected

@@ -224,6 +224,109 @@ test.describe('the loop continues', () => {
   })
 })
 
+test.describe('the keyboard is one board', () => {
+  /**
+   * Every key of the keyboard, grouped by the row it sits in, with the board's
+   * own width. Rounded, because a layout that is identical can still differ in
+   * the last subpixel.
+   */
+  const boardShape = (page) =>
+    page.evaluate(() => {
+      const board = document.querySelector('button[lang="th"]').closest('div.flex-col')
+      const box = (element) => {
+        const rect = element.getBoundingClientRect()
+        return {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+      }
+
+      return {
+        width: Math.round(board.getBoundingClientRect().width),
+        rows: [...board.querySelectorAll(':scope > div')].map((row) =>
+          [...row.querySelectorAll('button')].map(box),
+        ),
+      }
+    })
+
+  test('Shift changes what the keys type, not where they are', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+    await page.waitForFunction(() => document.fonts.status === 'loaded')
+
+    const unshifted = await boardShape(page)
+    await page.getByRole('button', { name: '⇧ Shift' }).first().click()
+    const shifted = await boardShape(page)
+
+    // Not only the key count: every key, including the modifiers. The shift
+    // layer used to carry an eleventh key on the bottom row, which the right
+    // Shift shrank to make room for — so the board reflowed under the fingers
+    // aiming at it.
+    expect(shifted).toEqual(unshifted)
+  })
+
+  test('a character Kedmanee lacks is reached by switching layout', async ({ page }) => {
+    // The corpus carries `!` and no Thai keyboard has a key for it. The sentence
+    // is shown as it was ingested, and the board switches to the Latin layout to
+    // point at the key — which is what a Thai typist does.
+    await mockBackend(page, ['ขอบคุณ!'])
+    await page.goto('/')
+
+    const sentence = await sentenceOnScreen(page)
+    expect(sentence).toBe('ขอบคุณ!')
+
+    // Thai while the Thai characters are being typed...
+    await expect(page.getByRole('button', { name: /Keyboard layout/ })).toHaveText('ไทย')
+    await clickThrough(page, 'ขอบคุณ')
+
+    // ...and the Latin board once `!` is what is expected, with its key lit.
+    await expect(page.getByRole('button', { name: /Keyboard layout/ })).toHaveText('EN')
+    await expect(page.locator('button[aria-label^="!,"]')).toHaveClass(/ring-2/)
+
+    await clickThrough(page, '!')
+    await expect(page.getByText('✓ Correct')).toBeVisible()
+  })
+
+  test('the learner can switch layout themselves', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    const control = page.getByRole('button', { name: /Keyboard layout/ })
+    await expect(control).toHaveText('ไทย')
+
+    await control.click()
+
+    await expect(control).toHaveText('EN')
+    await expect(page.locator('button[aria-label^="q,"]')).toBeVisible()
+  })
+
+  test('the board does not switch for punctuation Kedmanee carries', async ({ page }) => {
+    // `?` is on both boards. The exercise's own wins, so the keyboard does not
+    // move under a learner who is still typing Thai.
+    await mockBackend(page, ['อะไรนะ?'])
+    await page.goto('/')
+
+    await clickThrough(page, 'อะไรนะ')
+
+    await expect(page.getByRole('button', { name: /Keyboard layout/ })).toHaveText('ไทย')
+  })
+
+  test('the shift layer is really on screen', async ({ page }) => {
+    // Guards the test above from passing because nothing happened at all.
+    await mockBackend(page)
+    await page.goto('/')
+
+    const unshifted = await page.locator('button[lang="th"]').allTextContents()
+    await page.getByRole('button', { name: '⇧ Shift' }).first().click()
+    const shifted = await page.locator('button[lang="th"]').allTextContents()
+
+    expect(shifted).not.toEqual(unshifted)
+    expect(shifted).toContain('ฏ')
+  })
+})
+
 /** The sentence with its last character swapped — same length, wrong answer. */
 function wrongAnswerFor(sentence) {
   const chars = [...sentence]

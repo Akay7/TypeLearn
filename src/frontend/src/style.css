@@ -12,8 +12,16 @@
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   /* The width of the on-screen keyboard, and so of the column the exercise is
      practised in: the input the learner types into lines up with the keys they
-     type on, rather than running wider than the board underneath it. */
-  --board: 47.25rem;
+     type on, rather than running wider than the board underneath it.
+
+     The number row sets it, being the widest: thirteen 1u keys and a 2u
+     Backspace, plus the gaps between them — 48.25rem — and then the 1rem of
+     padding on each side of the panel they sit in. Leaving that out is not a
+     rounding error: the rows that reach the full width would overflow the
+     content box and flex-shrink to fit, while the shorter home row would not,
+     so a key on the number row would be narrower than the key below it and no
+     column would line up. */
+  --board: 50.25rem;
 
   /* A looped face, not the system default. A learner who cannot yet tell Thai
      letters apart identifies them by the head — the loop most consonants open
