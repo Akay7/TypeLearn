@@ -5,3 +5,13 @@
 # directory name, which is stable but arbitrary; a small fixed number is easier
 # to remember. The main checkout is 0.
 export WORKTREE_OFFSET=1
+
+# Development mode: source synced into the pods, Vite's dev server and its hot
+# reload, DJANGO_DEBUG, and the buttons that run the suites in the pod. Without
+# it `tilt up` brings up what a deployment runs — which is the default so that
+# the thing that has to work is the thing that runs by default.
+export TYPELEARN_DEV_MODE=1
+
+# Attach a debugger to the backend container (port 5678 + offset). Implies
+# development mode: debugpy ships in the dev image only.
+# export TYPELEARN_DEBUG_BACKEND=1
