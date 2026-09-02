@@ -2,14 +2,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
-// The paths that belong to Django rather than to the SPA.
+// The paths that do not belong to the SPA.
 //
-// This is the same list as `gateway.backendPaths` in chart/values.yaml, and it
-// is the same list for the same reason: in the cluster the Gateway sends these
-// to the backend, and here the dev server does. They have to move together — a
-// path added to one and not the other works in the cluster and 404s against the
-// dev server, or the reverse, and only whoever is running the frontend on the
-// host would ever see it.
+// Three of them are Django's — the same list as `gateway.backendPaths` in
+// chart/values.yaml — and `/media` is the clips, which the Gateway routes to the
+// media server rather than to Django. What matters here is the same for both:
+// in the cluster the Gateway owns these paths, and here the dev server forwards
+// them to it. They have to move together — a path added to one and not the other
+// works in the cluster and 404s against the dev server, or the reverse, and only
+// whoever is running the frontend on the host would ever see it.
 const BACKEND_PATHS = ['/graphql', '/media', '/admin', '/static']
 
 // Where those paths go when the frontend is served from here instead of from

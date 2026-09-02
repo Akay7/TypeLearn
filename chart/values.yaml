@@ -96,9 +96,12 @@ gateway:
     secretName: ""
   # Paths that belong to Django rather than to the SPA. Everything else falls
   # through to the frontend.
+  #
+  # /media is deliberately absent: the clips are served by the media server, and
+  # the route to it is rendered separately so that turning the server off takes
+  # its route with it. Django has no media route in any environment.
   backendPaths:
     - /graphql
-    - /media
     - /admin
     - /static
 
@@ -172,6 +175,24 @@ media:
   # chart renders a static PV pre-bound to this release's claim; unset, and it
   # renders an ordinary claim against storageClass above.
   hostPath: ""
+  # Who serves the clips. Not the application: they are written at runtime and
+  # read once per exercise, and gunicorn's three workers are not where audio
+  # bandwidth belongs. A web server reads the same volume instead, and the
+  # Gateway routes MEDIA_URL to it — in development exactly as in a deployment,
+  # so the path that serves the audio is the same one in both.
+  server:
+    # false renders no media server and no route to one, for a deployment that
+    # serves the clips from somewhere else entirely — object storage behind a
+    # CDN, say. Nothing else changes: the backend still writes to the volume.
+    enabled: true
+    # Stock nginx, pinned like the database's image. There is no image to build
+    # here: the server block is a ConfigMap.
+    image: nginx:1.30-alpine
+    replicas: 1
+    resources: {}
+    # Seconds. Ingestion is deterministic and additive — a path holds the same
+    # clip for good — so clips cache well. Lower it if yours are rewritten.
+    cacheMaxAge: 3600
 
 # --- Worktree identity --------------------------------------------------------
 # Development only, and the reason it is a value: PersistentVolumes are

@@ -53,6 +53,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Directly after SecurityMiddleware and before everything else, where
+    # WhiteNoise's own documentation puts it: a static file is then answered
+    # without the session, auth and message middleware running for it.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,6 +135,27 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Collected into the image at build time and served from there by WhiteNoise, in
+# every environment — the admin is unstyled otherwise anywhere DEBUG is off.
+# Nothing mounts over this path: collecting at pod start would make every replica
+# repeat the work, make readiness wait on it, and let two replicas of one image
+# disagree about what they serve.
+#
+# The ingested clips are deliberately not served this way. They are written at
+# runtime and read once per exercise, and WhiteNoise builds its file index at
+# startup unless DEBUG is on — so a clip ingested after the pod started would
+# 404 until it restarted. A web server holds them instead; see
+# chart/templates/media-server.yaml.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise adds `Access-Control-Allow-Origin: *` to every static response
+# unless told not to. This application is served from exactly one origin, on
+# purpose, and carries no CORS configuration anywhere — a permission granted
+# because a library defaults to it is still a permission the application comes
+# to depend on. Nothing here is fetched cross-origin, including the admin's own
+# CSS, so nothing needs it.
+WHITENOISE_ALLOW_ALL_ORIGINS = False
 
 
 # Media files (audio clips copied from the corpus at ingestion)

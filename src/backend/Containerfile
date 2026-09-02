@@ -64,6 +64,18 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --chown=app:app . .
 
+# Django's static files are collected into the image rather than at pod start:
+# every replica of an image then serves exactly the same set, readiness waits on
+# nothing, and the work happens once. WhiteNoise serves them from here, so this
+# is the only step that puts them anywhere.
+#
+# Run as root before dropping to `app` — STATIC_ROOT is created under /app,
+# which app owns, but the collected tree is part of the image, not something the
+# running container writes. `manage.py` imports settings, which read
+# DJANGO_SECRET_KEY from the environment and fall back to their own default;
+# nothing environment-specific is baked in by this.
+RUN python manage.py collectstatic --noinput
+
 USER app
 
 EXPOSE 8000

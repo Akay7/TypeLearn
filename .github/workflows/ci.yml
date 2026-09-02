@@ -63,6 +63,8 @@ jobs:
             --set frontend.mode=dev --set frontend.hmrClientPort=8500 \
             --set media.hostPath=/media --set worktree.slug=ci \
             --set postgres.allowCreateDatabase=true > /dev/null
+          echo "media served from outside the chart"
+          helm template typelearn chart $API --set media.server.enabled=false > /dev/null
           echo "an external database"
           helm template typelearn chart $API --set postgres.enabled=false \
             --set externalDatabase.host=db.example.com \
