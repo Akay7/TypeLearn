@@ -1,0 +1,143 @@
+{{- if .Values.media.server.enabled }}
+# The clips, served by a web server rather than by the application.
+#
+# They are written at runtime by ingestion and read once per exercise, which is
+# the opposite of what the application is good at: gunicorn's workers are a fixed
+# small number, and a slow client downloading audio occupies one of them for the
+# whole transfer. Serving them here keeps the audio bandwidth and the GraphQL
+# latency out of the same pool, handles Range requests (what seeking in an
+# `<audio>` element depends on), and — because the server reads the store rather
+# than an index built at start — serves a clip ingested a minute ago without
+# anything being restarted.
+#
+# Stock nginx over the store, configured from a ConfigMap: an image built for
+# twelve lines of configuration would be a third thing to build, push, and keep
+# in step.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-server-conf
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_tokens off;
+
+      # The probes' target. Deliberately not a clip: the store is legitimately
+      # empty before the first ingestion, and probing a file that does not exist
+      # yet would report a healthy server as broken.
+      location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 'ok';
+      }
+
+      # MEDIA_URL, mapped onto the mounted store. `alias` rather than `root`
+      # because the URL prefix is not part of the path on disk.
+      location /media/ {
+        alias /srv/media/;
+        # The store is not a directory listing. Without this a request for
+        # /media/clips/ would enumerate the corpus.
+        autoindex off;
+        # Ingestion is deterministic and additive — a given path holds the same
+        # clip for good — so a clip may be cached. A value, so a deployment that
+        # rewrites clips in place can lower it.
+        add_header Cache-Control "public, max-age={{ .Values.media.server.cacheMaxAge }}";
+      }
+
+      # Nothing else is served from here. The Gateway sends only /media, but a
+      # server that answers whatever it is asked is one more thing to reason
+      # about if that ever changes.
+      location / {
+        return 404;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+    {{- include "typelearn.selectorLabels" (dict "component" "media-server") | nindent 4 }}
+spec:
+  replicas: {{ .Values.media.server.replicas }}
+  selector:
+    matchLabels:
+      {{- include "typelearn.selectorLabels" (dict "component" "media-server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "typelearn.labels" . | nindent 8 }}
+        {{- include "typelearn.selectorLabels" (dict "component" "media-server") | nindent 8 }}
+      annotations:
+        # Roll the pods when the server block changes; a mounted ConfigMap
+        # updates in place eventually, but nginx does not reread it on its own.
+        # Hashed from the values the block is rendered from, not from the
+        # rendered file — this Deployment lives in that file, so including it
+        # here would render itself.
+        checksum/config: {{ toYaml .Values.media.server | sha256sum }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: nginx
+          image: {{ .Values.media.server.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: media
+              mountPath: /srv/media
+              # This server only ever reads. The backend and the ingest Job hold
+              # the same volume for writing; nothing here should be able to
+              # change what they wrote.
+              readOnly: true
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          {{- with .Values.media.server.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- include "typelearn.mediaVolume" . | nindent 8 }}
+        - name: conf
+          configMap:
+            name: media-server-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "typelearn.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "typelearn.selectorLabels" (dict "component" "media-server") | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

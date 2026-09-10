@@ -5,7 +5,6 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.1/topics/http/urls/
 """
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import path
@@ -32,7 +31,9 @@ urlpatterns = [
     ))),
 ]
 
-# In development the runserver serves the ingested audio clips itself, so an
-# <audio> element can load MEDIA_URL without a separate web server.
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# There is deliberately no route for MEDIA_URL here, in any mode. The clips are
+# served by the media server the chart deploys, which reads the same volume the
+# backend writes to — so the path that serves the audio is the same one in
+# development and in a deployment. Serving them here under DEBUG is what this
+# replaced: it made the arrangement that ships the one nobody ran, and every
+# clip 404'd the moment DEBUG was off.

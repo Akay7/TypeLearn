@@ -1,9 +1,10 @@
 {{- if .Values.gateway.enabled }}
 # What makes the application one origin, and so what makes CORS unnecessary.
 #
-# Django's paths go to the backend; everything else falls through to the
-# frontend. Gateway API matches more specific paths before the "/" catch-all,
-# and the backend rule is listed first regardless.
+# Django's paths go to the backend, the clips go to the media server, and
+# everything else falls through to the frontend. Gateway API matches more
+# specific paths before the "/" catch-all, and the specific rules are listed
+# first regardless.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -28,6 +29,18 @@ spec:
       backendRefs:
         - name: backend
           port: 8000
+    {{- if .Values.media.server.enabled }}
+    # The clips. Rendered with the server, so a deployment that serves media
+    # from elsewhere turns off one value and gets neither — rather than a route
+    # pointing at a Service that does not exist.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /media
+      backendRefs:
+        - name: media-server
+          port: 80
+    {{- end }}
     - matches:
         - path:
             type: PathPrefix

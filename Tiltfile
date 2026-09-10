@@ -85,7 +85,37 @@ DEBUG_PORT = int(os.getenv("TYPELEARN_DEBUG_PORT", str(5678 + OFFSET)))
 # allowed, a stale shell) is visible rather than surfacing as a port collision.
 TILT_PORT = _wt("tilt-port")
 
-print("Worktree slug=%s namespace=%s gateway=http://localhost:%d tilt=http://localhost:%s db=127.0.0.1:%d" % (SLUG, NAMESPACE, PORT, TILT_PORT, DB_PORT))
+# --- Development mode ---------------------------------------------------------
+# A plain `tilt up` brings up the stack a deployment gets: the images' `runtime`
+# and `serve` stages, gunicorn with its three workers, nginx serving a built
+# bundle, DJANGO_DEBUG off, ALLOWED_HOSTS without the development wildcard, and
+# no development-only affordance switched on. That is the default because it is
+# the thing that has to work — a mode nobody runs by accident is a mode whose
+# breakage is found by a deployment rather than here.
+#
+# TYPELEARN_DEV_MODE=1, most usefully in .envrc.local, switches on everything
+# that makes it pleasant to work in and that no deployment has: the `dev` and
+# `build` stages, source synced into the pods, Vite's dev server and its hot
+# reload, gunicorn --reload, DJANGO_DEBUG, a database role that may create the
+# test database, and the buttons that run the suites in the pod.
+#
+# What neither mode changes is everything else: same cluster, same namespace,
+# same port, same database, same chart. A deployment differs from development in
+# its values, so these differ in their values too — otherwise the default would
+# be a second arrangement rather than the one that ships.
+#
+# The cost of the default is the thing it is proving: nothing is synced into a
+# pod, so every source edit is a full rebuild.
+DEV_MODE = os.getenv("TYPELEARN_DEV_MODE", "") not in ("", "0", "false")
+
+# The debugger implies it rather than conflicting with it: debugpy is a dev
+# dependency, so the `runtime` image a deployment installs has none to attach to.
+# Asking for the debugger is asking for the image that carries it.
+if DEBUG_BACKEND and not DEV_MODE:
+    print("TYPELEARN_DEBUG_BACKEND implies development mode — debugpy ships only in the dev image.")
+    DEV_MODE = True
+
+print("Worktree slug=%s namespace=%s mode=%s gateway=http://localhost:%d tilt=http://localhost:%s db=127.0.0.1:%d" % (SLUG, NAMESPACE, "development" if DEV_MODE else "production", PORT, TILT_PORT, DB_PORT))
 
 # --- Cluster-scoped bootstrap, shared by every worktree -----------------------
 # Installed only when missing, and never handed to Tilt: if Tilt owned these, a
@@ -184,29 +214,41 @@ CI_PREBUILT = os.getenv("CI_PREBUILT", "")
 # the pod stays unready until `tilt ci` times out. Follow the image instead: CI
 # smoke-tests the frontend exactly as it ships, and a developer, whose Tilt
 # builds the `build` stage below, still gets the dev server and hot reload.
-FRONTEND_MODE = "serve" if CI_PREBUILT else "dev"
+# The default reaches the same conclusion from the other direction: it builds the
+# `serve` stage on purpose, so only development mode — which builds `build` —
+# renders the dev server.
+FRONTEND_MODE = "dev" if DEV_MODE and not CI_PREBUILT else "serve"
 
 if not CI_PREBUILT:
     docker_build(
         "typelearn-backend",
         context="./src/backend",
         dockerfile="./src/backend/Containerfile",
-        # The dev stage carries the test dependencies, so the "Run backend
-        # tests" button has a pytest to run. The prod overlay uses `runtime`.
-        target="dev",
+        # `runtime` is what a deployment installs, and so the default here.
+        # Development mode builds `dev`, the same image plus the test
+        # dependencies — which is why the pod has a pytest for the button below
+        # to run, and why the default's pod does not.
+        target="dev" if DEV_MODE else "runtime",
+        # Development syncs source into the running pod. The default syncs
+        # nothing: it runs the image as built, so a source edit is a rebuild —
+        # an image that ships is not one whose contents can be replaced from
+        # outside while it runs.
         live_update=[
             sync("./src/backend", "/app"),
             # The initContainer only runs at pod start, so a new migration would
             # otherwise sit unapplied until the pod restarted.
             run("python manage.py migrate --noinput", trigger=["./src/backend/**/migrations/*.py"]),
-        ],
+        ] if DEV_MODE else [],
     )
 
     docker_build(
         "typelearn-frontend",
         context="./src/frontend",
         dockerfile="./src/frontend/Containerfile",
-        target="build",
+        # `serve` is the bundle behind nginx, exactly as a deployment serves it.
+        # Vite's dev server, and the hot reload the syncs below exist for, live
+        # in `build` — a stage no deployment ever runs.
+        target="build" if DEV_MODE else "serve",
         live_update=[
             # A dependency change is not something a sync can express, so it
             # falls back to a full rebuild. Tilt requires this to be the first
@@ -228,7 +270,7 @@ if not CI_PREBUILT:
             # next full rebuild.
             sync("./src/frontend/e2e", "/app/e2e"),
             sync("./src/frontend/playwright.config.js", "/app/playwright.config.js"),
-        ],
+        ] if DEV_MODE else [],
     )
 
 # --- Configuration ------------------------------------------------------------
@@ -267,6 +309,21 @@ def read_dotenv(path):
 
 ENV, SECRETS = read_dotenv(".env")
 
+# .env is a development file — DEBUG on, and a wildcard in ALLOWED_HOSTS so
+# anything can reach the backend — and it is also read by management commands run
+# on the host, so it keeps saying that. Outside development mode these two are
+# overridden here instead, rather than asking a developer to edit .env and
+# remember to put it back.
+#
+# The host list narrows rather than only DEBUG flipping: a wildcard would hide
+# exactly the class of misconfiguration the default exists to catch. The two
+# spellings left are the ones really sent — the Gateway forwards the browser's
+# Host (localhost:PORT, and Django ignores the port), and the probes send a fixed
+# Host of their own.
+if not DEV_MODE:
+    ENV["DJANGO_DEBUG"] = "false"
+    ENV["DJANGO_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
+
 # --- The stack ----------------------------------------------------------------
 # One chart, rendered here with development values and by a deployment with its
 # own. The templates a developer exercises every day are the templates a
@@ -276,7 +333,7 @@ ENV, SECRETS = read_dotenv(".env")
 # to have rewritten into it by string replacement. They are values now, so the
 # class of bug where a renderer stripped the quotes from a port and Kubernetes
 # rejected a number is not fixed but impossible.
-DEV_VALUES = {
+VALUES = {
     # Tilt rewrites these refs to the images it just built. The tags matter only
     # in CI_PREBUILT mode, where Tilt rewrites nothing and the cluster must
     # already hold exactly these names.
@@ -285,9 +342,10 @@ DEV_VALUES = {
         "frontend": {"repository": "typelearn-frontend", "tag": "latest"},
     },
     "backend": {
-        # --reload so Tilt's synced source takes effect without a pod restart.
-        # A deployment sets no command and gets the image's own.
-        "command": ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--reload"],
+        # Empty means the image's own CMD — gunicorn with three workers, what a
+        # deployment runs. Development mode replaces it to add --reload, so
+        # Tilt's synced source takes effect without a pod restart.
+        "command": ["gunicorn", "typelearn.wsgi:application", "--bind", "0.0.0.0:8000", "--reload"] if DEV_MODE else [],
         # Under a debugger the chart ignores the command above and runs Django's
         # own server single-process instead; see chart/values.yaml for why.
         "debug": {"enabled": DEBUG_BACKEND, "port": 5678},
@@ -296,8 +354,10 @@ DEV_VALUES = {
     # Vite's HMR websocket connects — except in CI, which loaded the `serve`
     # stage: see FRONTEND_MODE.
     "frontend": {"mode": FRONTEND_MODE, "hmrClientPort": str(PORT)},
-    # pytest-django creates and drops its own test database on every run.
-    "postgres": {"allowCreateDatabase": True},
+    # pytest-django creates and drops its own test database on every run, so
+    # development mode's role may create databases. A deployment's may not, and
+    # neither may the default's.
+    "postgres": {"allowCreateDatabase": DEV_MODE},
     # The node path kind mounts the host's media directory onto, shared by every
     # worktree so the corpus is ingested once rather than per checkout.
     "media": {"hostPath": "/media"},
@@ -315,7 +375,7 @@ DEV_VALUES = {
 watch_file("chart")
 watch_file("k8s")
 local("mkdir -p .tilt", quiet=True)
-local("cat > .tilt/values-dev.yaml <<'TILT_VALUES_EOF'\n%s\nTILT_VALUES_EOF" % str(encode_yaml(DEV_VALUES)), quiet=True)
+local("cat > .tilt/values.yaml <<'TILT_VALUES_EOF'\n%s\nTILT_VALUES_EOF" % str(encode_yaml(VALUES)), quiet=True)
 
 if NAMESPACE != "default":
     k8s_yaml(encode_yaml({
@@ -324,7 +384,7 @@ if NAMESPACE != "default":
         "metadata": {"name": NAMESPACE},
     }))
 
-k8s_yaml(helm("chart", name="typelearn", namespace=NAMESPACE, values=[".tilt/values-dev.yaml"]))
+k8s_yaml(helm("chart", name="typelearn", namespace=NAMESPACE, values=[".tilt/values.yaml"]))
 
 # --- Resources ----------------------------------------------------------------
 k8s_resource(
@@ -346,6 +406,15 @@ k8s_resource(
     labels=["app"],
 )
 k8s_resource("frontend", labels=["app"])
+# Stock nginx over the media volume, read-only. Tilt builds nothing for it — the
+# image is pulled, and its configuration is a ConfigMap the chart renders — but
+# it is the thing that serves every clip, so it belongs on the board with the
+# rest of the application rather than in "uncategorized".
+k8s_resource(
+    "media-server",
+    objects=["media-server-conf:configmap"],
+    labels=["app"],
+)
 k8s_resource(
     new_name="networking",
     objects=["typelearn-gateway:gateway", "typelearn:httproute"],
@@ -374,7 +443,7 @@ local_resource(
         done
         kubectl port-forward -n tigera-gateway "svc/$SVC" %d:80
     """ % (NAMESPACE, PORT),
-    resource_deps=["backend", "frontend"],
+    resource_deps=["backend", "frontend", "media-server"],
     links=[link("http://localhost:%d" % PORT, "TypeLearn")],
     labels=["gateway"],
 )
@@ -400,6 +469,11 @@ local_resource(
 # pytest creates its test database, the forward dies with "lost connection to
 # pod", and all 40 tests then error on a connection refused. Plaintext over a
 # loopback forward to a local cluster gives up nothing to keep it alive.
+#
+# Outside development mode it still comes up, but only as a connection to look at
+# the database with: the role there cannot create databases, so the editor's test
+# runs — which start by creating one — are refused. That is the deployment's
+# behaviour, faithfully reproduced.
 #
 # Not in CI. `tilt ci` waits for every resource to be ready, and this one exists
 # only to serve an editor that CI does not have — so there it would be one more
@@ -460,13 +534,17 @@ cmd_button(
     argv=in_backend_pod('kubectl exec -n %s "$POD" -- python manage.py migrate --noinput' % NAMESPACE),
 )
 
-cmd_button(
+# Development mode only: the default installs the `runtime` stage, which carries
+# no pytest, and the `serve` stage, which is nginx and carries no npm. Offering a
+# button that cannot run is worse than not offering it.
+if DEV_MODE:
+  cmd_button(
     "backend:pytest",
     resource="backend",
     text="Run backend tests",
     icon_name="science",
     argv=in_backend_pod('kubectl exec -n %s "$POD" -- pytest' % NAMESPACE),
-)
+  )
 
 # The frontend's suites run in the pod for the reason the backend's do: the
 # environment they run in is the image that ships, not one assembled on a
@@ -481,13 +559,14 @@ def in_frontend_pod(script):
         """ % (NAMESPACE, script),
     ]
 
-cmd_button(
+if DEV_MODE:
+  cmd_button(
     "frontend:vitest",
     resource="frontend",
     text="Run frontend tests",
     icon_name="science",
     argv=in_frontend_pod('kubectl exec -n %s "$POD" -- npm run test' % NAMESPACE),
-)
+  )
 
 # Two flags, both of which the suite needs *here* and nowhere else.
 #
@@ -501,7 +580,8 @@ cmd_button(
 # container cannot carry them: the run dies partway through with SIGKILL. The
 # whole suite takes about ten seconds serialised, so there is nothing to win by
 # fixing it.
-cmd_button(
+if DEV_MODE:
+  cmd_button(
     "frontend:playwright",
     resource="frontend",
     text="Run browser tests",
@@ -509,7 +589,7 @@ cmd_button(
     argv=in_frontend_pod(
         'kubectl exec -n %s "$POD" -- env E2E_PORT=5173 npx playwright test --workers=1' % NAMESPACE
     ),
-)
+  )
 
 # Ingestion reads the corpus mounted by k8s/kind.yaml and writes the selected
 # clips into the shared media volume. Minutes long and only needed when the
@@ -542,7 +622,7 @@ cmd_button(
         esac
         kubectl delete job ingest -n NS --ignore-not-found
         helm template typelearn chart --namespace NS \
-          --values .tilt/values-dev.yaml \
+          --values .tilt/values.yaml \
           --set ingest.enabled=true \
           --set ingest.corpusHostPath=/corpus \
           --set-string image.backend.repository="$REPO" \

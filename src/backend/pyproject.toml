@@ -8,10 +8,16 @@ authors = [
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "django>=6.1,<7.0",
-    "strawberry-graphql-django>=0.87.0,<0.88.0",
+    "strawberry-graphql-django>=0.88.1,<0.89.0",
     "psycopg[binary]>=3.3.4,<4.0.0",
     "gunicorn>=26.1.0,<27.0.0",
     "pillow>=12.3.0,<13.0.0",
+    # Django's own static files — the admin's CSS — are served by the
+    # application in every environment. They are a fixed set collected into the
+    # image at build time, which is what WhiteNoise is for; the ingested clips
+    # are not, and are served by a web server instead. See the chart's media
+    # server.
+    "whitenoise>=6.12,<7.0",
 ]
 
 [dependency-groups]
@@ -39,3 +45,12 @@ python_files = ["test_*.py", "*_test.py"]
 # this project relies on the cache (no --lf/--sw workflow in CI or the Tilt
 # button), so turn it off rather than carve out a writable path for it.
 addopts = "-p no:cacheprovider"
+# Django forces DEBUG=False for tests, so WhiteNoise scans STATIC_ROOT and warns
+# once per client instantiation that it is not there. It is not there on a
+# developer's machine by design: the collected tree is built into the image by
+# `collectstatic` in the Containerfile, and nothing on the host collects it. The
+# warning is accurate and says nothing about the code under test, so it is
+# silenced here rather than answered by collecting static files to run tests.
+filterwarnings = [
+    "ignore:No directory at:UserWarning",
+]

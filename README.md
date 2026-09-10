@@ -72,8 +72,24 @@ tilt up
 That builds both images, installs what the cluster is missing the first time
 (Calico for the CNI and the Gateway API, CloudNativePG for PostgreSQL), renders
 [`chart/`](chart/) with values generated from `.env`, and serves the app at
-**http://localhost:8500**. Editing backend
-Python or frontend source reaches the running pods without a rebuild.
+**http://localhost:8500**.
+
+What comes up is what a deployment runs: gunicorn behind nginx, `DJANGO_DEBUG`
+off, the images' `runtime` and `serve` stages. That is the default because it is
+the thing that has to work — a mode nobody runs by accident is a mode whose
+breakage is found by a deployment rather than here. Editing source in it means
+rebuilding.
+
+**To work on the code, turn development mode on.** Once per checkout:
+
+```bash
+echo 'export TYPELEARN_DEV_MODE=1' >> .envrc.local && direnv allow
+tilt up
+```
+
+Then source is synced into the running pods, the frontend is Vite with hot
+reload, and the Tilt UI carries the buttons that run the suites. See
+[Development mode, and the default](#development-mode-and-the-default).
 
 The first run takes a few minutes, mostly waiting for Calico. Later runs skip the
 bootstrap.
@@ -128,7 +144,8 @@ keeps the bare `8500` and Tilt's default `10350`.
 `.envrc` sets `TILT_PORT` from that derivation — Tilt binds its web server before
 it reads the Tiltfile, so the port has to be in the environment — which is why
 `direnv allow` matters in a fresh worktree. Every worktree's `tilt up` then stays
-attached at once, each syncing source into its own pods.
+attached at once, each with its own pods — and its own mode, since
+`TYPELEARN_DEV_MODE` lives in `.envrc.local`.
 
 Only one thing is deliberately *not* per-worktree: the audio. Every worktree
 reads the one `data/media`, so ingestion is done once rather than per checkout.
@@ -147,7 +164,9 @@ to another.
 
 Management commands run in the pod — the Tilt UI has buttons for migrations, the
 backend test suite, and ingestion. The backend suite that counts runs there too,
-inside the image CI built.
+inside the image CI built. The test buttons appear in development mode only: the
+default's pods are the `runtime` and `serve` images, which carry no pytest and no
+npm, and a button that cannot run is worse than no button.
 
 The database is also forwarded to the host (`15432 + offset`) for one purpose:
 so the editor can run and debug the backend tests. See below.
@@ -163,8 +182,8 @@ npm run test:e2e          # playwright, driving Chromium against its own dev ser
 
 ### Working on one piece at a time
 
-Everything runs in the cluster and source is synced into the pods, so ordinary
-editing needs nothing on your machine.
+Everything runs in the cluster and, in development mode, source is synced into
+the pods, so ordinary editing needs nothing on your machine.
 
 **The frontend, on the host.** For fast HMR against real exercises. Nothing to
 set up: the dev server proxies `/graphql/`, `/media/`, `/admin/` and `/static/`
@@ -185,6 +204,9 @@ reconstruction can differ.
 echo 'export TYPELEARN_DEBUG_BACKEND=1' >> .envrc.local && direnv allow
 tilt up
 ```
+
+It turns development mode on by itself — `debugpy` is a dev dependency, so the
+`runtime` image the default installs has none to attach to.
 
 The backend then runs under `debugpy` and Tilt forwards the attach port (5678,
 plus this worktree's offset). In VS Code, pick **Backend: attach to the
@@ -244,12 +266,69 @@ never moves under your fingers. Those four are the ones `npm run test:e2e` exist
 for — a font being loaded, a clip playing, and two elements staying put are claims
 only a browser can settle.
 
+### Development mode, and the default
+
+`tilt up` brings up what a deployment runs. `TYPELEARN_DEV_MODE=1` in
+`.envrc.local` brings up everything that makes it pleasant to work in and that no
+deployment has:
+
+| | default | `TYPELEARN_DEV_MODE=1` |
+| --- | --- | --- |
+| backend image | `runtime` stage | `dev` stage (carries pytest and debugpy) |
+| backend server | the image's own CMD — gunicorn, three workers | gunicorn `--reload` |
+| frontend image | `serve` stage, nginx and the built bundle | `build` stage, the Vite dev server |
+| source changes | none — every edit is a rebuild | synced into the pods, HMR |
+| `DJANGO_DEBUG` | `false` | `true`, from `.env` |
+| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | the wildcard from `.env` |
+| database role | may not create databases, as a deployment's may not | may, since pytest needs it |
+| test buttons | absent | present |
+
+Everything else is the same either way: same cluster, same namespace, same port,
+same database, same chart. A deployment differs from development in its values,
+so these differ in their values too — otherwise the default would be a second
+arrangement rather than the one that ships. `tilt up` prints which mode it is in.
+
+The host list narrows rather than only `DJANGO_DEBUG` flipping, because a
+wildcard hides the misconfiguration the default exists to catch. `.env` keeps
+saying `DJANGO_DEBUG=true` — it is a development file, also read by management
+commands run on the host — and the Tiltfile overrides those two settings on the
+way into the cluster, so there is nothing to edit and put back.
+
+`TYPELEARN_DEBUG_BACKEND=1` implies development mode: `debugpy` ships in the dev
+image only.
+
+One thing the default found the first time it ran: with `DJANGO_DEBUG=false`
+Django served neither `/media/` nor `/static/`, so every clip 404'd and the admin
+lost its CSS — in a deployment as much as here. Both are fixed, and neither is
+fixed by the debug setting any more; see [What serves what](#what-serves-what).
+
 ## Installing it somewhere
 
 The stack is one Helm chart in [`chart/`](chart/), and it is not a second
 description of the manifests — it *is* the manifests. `tilt up` renders the same
 chart with development values, so a template that works locally is a template a
 deployment installs.
+
+### What serves what
+
+Four things are served, by three different servers, the same way in every
+environment — none of them chosen by `DJANGO_DEBUG`:
+
+| path | served by |
+| --- | --- |
+| `/` and the rest of the SPA | the frontend: nginx over the built bundle, or Vite in development mode |
+| `/graphql/`, `/admin/` | Django |
+| `/static/` (the admin's CSS) | Django, by WhiteNoise, from files `collectstatic` put in the image |
+| `/media/` (the clips) | `media-server`: stock nginx over the media volume, read-only |
+
+The clips get a server of their own because they are the one thing written at
+runtime and read for every exercise. Serving them from Django would put audio
+bandwidth and GraphQL latency in the same three gunicorn workers, and WhiteNoise
+— which is right for the static files — builds its file index at startup, so a
+clip ingested after the pod started would 404 until it restarted.
+
+Set `media.server.enabled: false` and the chart renders neither the server nor
+the `/media` route, for a deployment serving clips from object storage or a CDN.
 
 ### What the cluster must already have
 
@@ -277,7 +356,8 @@ helm install typelearn ./chart \
 What a deployment actually has to decide is image tags, a hostname, storage
 classes and sizes, and where its secret comes from. Everything else already
 defaults to the deployment-shaped answer: debug off, the frontend serving the
-built bundle, and no development affordance switched on.
+built bundle, the clips served by the media server, and no development affordance
+switched on.
 
 ### Configuration and secrets
 

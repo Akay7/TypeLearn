@@ -1,6 +1,9 @@
 # The corpus and the ingested clips are mounted, never baked into an image.
 media/
 data/
+# Collected inside the image by the runtime stage; a copy left on a developer's
+# machine must not be shipped in its place.
+staticfiles/
 .venv/
 __pycache__/
 *.pyc

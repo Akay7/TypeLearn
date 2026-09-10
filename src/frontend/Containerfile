@@ -1,16 +1,29 @@
-# Frontend image, in two stages that are both used.
+# Frontend image. Every stage here is used:
 #
-#   build — source plus node_modules. Development runs the Vite dev server from
-#           this stage so hot reload survives the move into the cluster, and CI
-#           runs vitest and the Playwright suite inside it, so what is tested is
-#           what was installed rather than a separately assembled environment.
-#   serve — nginx and the built bundle, which is what a deployment runs.
+#   build  — source plus node_modules on Playwright's image, so the browsers are
+#            already present. Development runs the Vite dev server from this
+#            stage and CI runs vitest and the Playwright suite in it, so what is
+#            tested is what was installed, not a separately assembled environment.
+#   bundle — a plain node base that only produces dist/. Deliberately not built
+#            on `build`: a deployment artifact should not be assembled on top of
+#            the browsers it will never run.
+#   serve  — nginx and that bundle, which is what a deployment runs.
 #
 # The API is same-origin behind the Gateway, so nothing here needs a backend
 # address baked in at build time.
 
-# ---- build -----------------------------------------------------------------
-FROM node:24-slim AS build
+# ---- build ----------------------------------------------------------------
+# Playwright's own image: the browsers and their system libraries are already
+# installed under /ms-playwright (PLAYWRIGHT_BROWSERS_PATH points there). The
+# alternative — a plain node base plus `npx playwright install --with-deps` —
+# fetches a browser build from cdn.playwright.dev on every layer-cache miss,
+# which is slow and fails the whole image build whenever that CDN is slow or
+# unreachable. It ships the same Node 24 as node:24-slim.
+#
+# The tag must track the @playwright/test version in package.json: Playwright
+# checks the two at runtime and a mismatch means the bundled browser is the
+# wrong revision for the client library.
+FROM mcr.microsoft.com/playwright:v1.63.0-noble AS build
 
 WORKDIR /app
 
@@ -20,18 +33,21 @@ RUN npm ci
 
 COPY . .
 
-# Playwright's browser is not in the base image and is only needed when CI runs
-# the browser suite from this stage; installing it here keeps that job from
-# downloading a browser on every run.
-RUN npx playwright install --with-deps chromium
-
 EXPOSE 5173
 # Development default. --host binds beyond loopback so the Gateway can reach it
 # from outside the pod's own network namespace.
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
-# ---- serve -----------------------------------------------------------------
-FROM build AS bundle
+# ---- bundle / serve -----------------------------------------------------------
+# Its own node base and its own `npm ci` rather than `FROM build`: the served
+# image must not depend on the Playwright base, so a slow pull or a browser CVE
+# never reaches the deployment path. dist/ is a pure function of the lockfile and
+# the source, so the two installs cannot drift in a way that reaches production.
+FROM node:24-slim AS bundle
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
 RUN npm run build
 
 FROM nginx:alpine AS serve
