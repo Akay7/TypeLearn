@@ -27,7 +27,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 
 # Pinned: an unpinned installer is an unpinned build, however locked the
 # dependencies it installs are.
-RUN pip install --no-cache-dir uv==0.12.6
+RUN pip install --no-cache-dir uv==0.12.10
 
 WORKDIR /app
 
