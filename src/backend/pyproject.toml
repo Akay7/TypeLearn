@@ -5,6 +5,7 @@ description = ""
 authors = [
     {name = "Egor Poderiagin",email = "egor@crazyrussian.pro"}
 ]
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "django>=6.1,<7.0",
