@@ -92,7 +92,11 @@ function buildRows(rows, board, decorate, where) {
       // has them says so and they are shown the way Unicode charts do. Tests
       // read `char` and never have to strip the decoration.
       label: decorate(char) || char,
-      finger: fingers[col],
+      finger: fingers[col].finger,
+      // Whether an index finger rests here when it isn't reaching for
+      // anything — a property of the position, so it survives whichever
+      // layer or layout is drawn over it.
+      home: fingers[col].home ?? false,
     }))
   })
 }

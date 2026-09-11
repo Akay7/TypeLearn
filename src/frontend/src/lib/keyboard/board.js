@@ -39,13 +39,21 @@ export const FINGER_NAMES = {
  * and the right little finger takes everything past the last letter column. One
  * entry per position — the length of a row here *is* the length of that row on
  * every layer of every layout on this board.
+ *
+ * Each position is `{ finger }`, or `{ finger, home: true }` for the two the
+ * index fingers rest on when they are reaching nothing — F and J on a Latin
+ * board, the home row's third and sixth positions here. `home` is a property
+ * of the position for the same reason `finger` is: it depends on where a
+ * finger rests, not on the layout or layer drawn over it.
  */
+const f = (finger, home) => (home ? { finger, home: true } : { finger })
+
 // prettier-ignore
 const FINGERS = [
-  ['l-pinky', 'l-pinky', 'l-ring', 'l-middle', 'l-index', 'l-index', 'r-index', 'r-index', 'r-middle', 'r-ring', 'r-pinky', 'r-pinky', 'r-pinky'],
-  ['l-pinky', 'l-ring', 'l-middle', 'l-index', 'l-index', 'r-index', 'r-index', 'r-middle', 'r-ring', 'r-pinky', 'r-pinky', 'r-pinky', 'r-pinky'],
-  ['l-pinky', 'l-ring', 'l-middle', 'l-index', 'l-index', 'r-index', 'r-index', 'r-middle', 'r-ring', 'r-pinky', 'r-pinky'],
-  ['l-pinky', 'l-ring', 'l-middle', 'l-index', 'l-index', 'r-index', 'r-index', 'r-middle', 'r-ring', 'r-pinky'],
+  [f('l-pinky'), f('l-pinky'), f('l-ring'), f('l-middle'), f('l-index'), f('l-index'), f('r-index'), f('r-index'), f('r-middle'), f('r-ring'), f('r-pinky'), f('r-pinky'), f('r-pinky')],
+  [f('l-pinky'), f('l-ring'), f('l-middle'), f('l-index'), f('l-index'), f('r-index'), f('r-index'), f('r-middle'), f('r-ring'), f('r-pinky'), f('r-pinky'), f('r-pinky'), f('r-pinky')],
+  [f('l-pinky'), f('l-ring'), f('l-middle'), f('l-index', true), f('l-index'), f('r-index'), f('r-index', true), f('r-middle'), f('r-ring'), f('r-pinky'), f('r-pinky')],
+  [f('l-pinky'), f('l-ring'), f('l-middle'), f('l-index'), f('l-index'), f('r-index'), f('r-index'), f('r-middle'), f('r-ring'), f('r-pinky')],
 ]
 
 /**
