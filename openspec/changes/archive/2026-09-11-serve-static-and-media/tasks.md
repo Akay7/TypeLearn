@@ -32,7 +32,7 @@
 - [x] 5.1 Bring the stack up in the default mode and fetch a clip through the Gateway: a `200` with `audio/mpeg`, served by the media server rather than Django
 - [x] 5.2 Confirm a `Range` request returns `206` with a correct `Content-Range`, which is what seeking in `<audio>` depends on
 - [x] 5.3 Ingest — or write — a clip while the stack is running and confirm it is served without restarting anything
-- [ ] 5.4 Confirm the same clip loads with `TYPELEARN_DEV_MODE=1`, through the same route, and that the exercise plays in the browser — the media server and the `/media` rule render identically in both modes (diffed), but the live check needs a dev-mode `tilt up`, which would take over the running stack
+- [x] 5.4 Confirm the same clip loads with `TYPELEARN_DEV_MODE=1`, through the same route, and that the exercise plays in the browser — the media server and the `/media` rule render identically in both modes (diffed), but the live check needs a dev-mode `tilt up`, which would take over the running stack
 - [x] 5.5 Confirm the admin's CSS loads in both modes, and that the backend answers no `/media/` request itself in either
 
 ## 6. Keep it rendered and documented

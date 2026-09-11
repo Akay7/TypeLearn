@@ -5,8 +5,10 @@ import AnswerInput from './AnswerInput.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import OnScreenKeyboard from './OnScreenKeyboard.vue'
 import { useExerciseStore } from '../stores/exercise'
+import { useSettingsStore } from '../stores/settings'
 
 const store = useExerciseStore()
+const settings = useSettingsStore()
 
 // Spread rather than .length: the hint counts the characters a learner types,
 // and every Thai vowel and tone mark is one of them.
@@ -49,8 +51,13 @@ const characterCount = computed(() =>
 
       <AnswerInput />
 
-      <!-- The layout the exercise is practised on, chosen by its language. -->
-      <OnScreenKeyboard :layout="store.layout" />
+      <!-- The layout the exercise is practised on, chosen by its language.
+           Hidden rather than unmounted when the learner turns it off, would
+           cost nothing here since it holds no state of its own worth keeping
+           — but v-if is simpler and the layer/scroll state resetting on
+           re-show is the right behavior anyway, the same as a new exercise
+           gets. -->
+      <OnScreenKeyboard v-if="settings.onScreenKeyboardVisible" :layout="store.layout" />
     </template>
   </section>
 </template>
