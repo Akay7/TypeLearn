@@ -157,54 +157,65 @@ const SWITCH_WIDTH = 'w-14'
        and must not depend on which layer is showing, or a board that changed
        width when a modifier was pressed would move every key out from under the
        finger aiming at it. It sets `--board`, the width of the exercise column. -->
-  <div class="flex w-[var(--board)] flex-col gap-1 rounded-xl bg-black/5 p-4 dark:bg-white/5">
-    <div
-      v-for="(row, index) in board.rows"
-      :key="index"
-      :class="['flex w-full gap-1', row.indent]"
-    >
-      <button
-        v-for="cell in row.cells"
-        :key="cell.kind === 'char' ? cell.char : cell.id"
-        type="button"
-        :lang="cell.kind === 'char' ? shown.language : undefined"
-        :class="[
-          KEY_CLASSES,
-          cell.width,
-          cell.kind === 'char' ? '' : 'text-sm',
-          tint(cell.finger),
-          highlighted(cell) ? ACTIVE_CLASSES : '',
-        ]"
-        :title="fingerName(cell.finger)"
-        :aria-label="cell.kind === 'char' ? `${cell.char}, ${fingerName(cell.finger)}` : cell.ariaLabel"
-        :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
-        @mousedown.prevent
-        @click="press(cell)"
-      >
-        {{ cell.label }}
-      </button>
-    </div>
+  <div class="flex w-full max-w-[var(--board)] flex-col gap-2 rounded-xl bg-black/5 p-4 dark:bg-white/5">
+    <!-- The rows never shrink below the width the layout's widest row and its
+         key size need — narrower than that, a key stops being a key-sized
+         target and the finger-position promise this whole board makes is
+         broken. Below `--board`, this scrolls sideways instead: the panel
+         around it (and the page) still shrink to fit the viewport, but what
+         is inside stays true size and the learner swipes to reach the rest,
+         the same way they would scroll any wide content on a phone. -->
+    <div class="overflow-x-auto overscroll-x-contain">
+      <div class="flex flex-col gap-1" style="width: calc(var(--board) - 2rem)">
+        <div
+          v-for="(row, index) in board.rows"
+          :key="index"
+          :class="['flex w-full gap-1', row.indent]"
+        >
+          <button
+            v-for="cell in row.cells"
+            :key="cell.kind === 'char' ? cell.char : cell.id"
+            type="button"
+            :lang="cell.kind === 'char' ? shown.language : undefined"
+            :class="[
+              KEY_CLASSES,
+              cell.width,
+              cell.kind === 'char' ? '' : 'text-sm',
+              tint(cell.finger),
+              highlighted(cell) ? ACTIVE_CLASSES : '',
+            ]"
+            :title="fingerName(cell.finger)"
+            :aria-label="cell.kind === 'char' ? `${cell.char}, ${fingerName(cell.finger)}` : cell.ariaLabel"
+            :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
+            @mousedown.prevent
+            @click="press(cell)"
+          >
+            {{ cell.label }}
+          </button>
+        </div>
 
-    <div class="flex w-full justify-center gap-1">
-      <button
-        v-for="cell in board.space.cells"
-        :key="cell.kind === 'char' ? cell.char : cell.id"
-        type="button"
-        :class="[
-          KEY_CLASSES,
-          cell.width,
-          'text-sm',
-          tint(cell.finger),
-          highlighted(cell) ? ACTIVE_CLASSES : '',
-        ]"
-        :title="fingerName(cell.finger)"
-        :aria-label="cell.kind === 'char' ? cell.label : cell.ariaLabel"
-        :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
-        @mousedown.prevent
-        @click="press(cell)"
-      >
-        {{ cell.label }}
-      </button>
+        <div class="flex w-full justify-center gap-1">
+          <button
+            v-for="cell in board.space.cells"
+            :key="cell.kind === 'char' ? cell.char : cell.id"
+            type="button"
+            :class="[
+              KEY_CLASSES,
+              cell.width,
+              'text-sm',
+              tint(cell.finger),
+              highlighted(cell) ? ACTIVE_CLASSES : '',
+            ]"
+            :title="fingerName(cell.finger)"
+            :aria-label="cell.kind === 'char' ? cell.label : cell.ariaLabel"
+            :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
+            @mousedown.prevent
+            @click="press(cell)"
+          >
+            {{ cell.label }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- The bottom bar: which board is on screen, and what the colours mean.
@@ -213,7 +224,7 @@ const SWITCH_WIDTH = 'w-14'
          operating system does, not a keystroke on any keycap, and a control
          that looked like a key would be read as one more thing to press while
          typing. -->
-    <div class="mt-2 flex items-center gap-4">
+    <div class="flex items-center gap-4">
       <button
         v-if="available.length > 1"
         type="button"
@@ -230,16 +241,17 @@ const SWITCH_WIDTH = 'w-14'
       </button>
 
       <!-- Colour is only half an answer without the names, and the hands mirror,
-           so one set of five covers both. -->
-      <ul class="flex grow justify-center gap-4 text-xs opacity-70">
+           so one set of five covers both. flex-wrap so a narrow panel wraps
+           the legend onto a second line rather than overflowing it. -->
+      <ul class="flex grow flex-wrap justify-center gap-x-4 gap-y-1 text-xs opacity-70">
         <li v-for="item in LEGEND" :key="item.finger" class="flex items-center gap-1.5">
           <span :class="['size-3 rounded-sm', item.swatch]" />
           {{ item.name }}
         </li>
       </ul>
 
-      <!-- Balances the control, so the legend is centred on the board rather
-           than on whatever space the control leaves. -->
+      <!-- Balances the layout control, so the legend is centred on the board
+           rather than on whatever space the control leaves. -->
       <div v-if="available.length > 1" :class="[SWITCH_WIDTH, 'shrink-0']" aria-hidden="true" />
     </div>
   </div>

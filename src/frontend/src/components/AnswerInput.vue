@@ -2,8 +2,10 @@
 import { onMounted, ref } from 'vue'
 
 import { useExerciseStore } from '../stores/exercise'
+import { useSettingsStore } from '../stores/settings'
 
 const store = useExerciseStore()
+const settings = useSettingsStore()
 
 const field = ref(null)
 
@@ -21,6 +23,10 @@ onMounted(() => field.value?.focus())
       <!-- A plain v-model: the browser already handles physical typing,
            backspace, selection, paste, and IME composition correctly, and
            intercepting keys here would break composition to reimplement it. -->
+      <!-- inputmode="none" keeps the OS virtual keyboard from covering the
+           on-screen one without disabling the field: it stays focusable,
+           editable, and a physical keyboard still types into it exactly as
+           inputmode="text" would. -->
       <input
         ref="field"
         v-model="store.typed"
@@ -29,6 +35,7 @@ onMounted(() => field.value?.focus())
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
+        :inputmode="settings.virtualKeyboardEnabled ? 'text' : 'none'"
         placeholder="Type what you hear"
         class="w-full rounded-lg border border-black/20 bg-black/5 p-3 text-2xl outline-none focus:border-indigo-500 dark:border-white/20 dark:bg-white/5"
         @keyup.enter="store.check()"

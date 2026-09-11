@@ -114,3 +114,43 @@ test.describe('the clip plays before the learner types', () => {
     await expect(page.locator('audio')).not.toHaveJSProperty('src', await first.evaluate((el) => el.src))
   })
 })
+
+test.describe('the autoplay prompt on a phone-sized viewport', () => {
+  // The prompt sits out of flow so it never shifts the Play button (see
+  // "the prompt does not move the play control" above); to the right of the
+  // button, as on a laptop, that same out-of-flow box has nowhere to go on a
+  // narrow, centred row and used to run past the edge of the screen.
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('the prompt stays within the viewport', async ({ page }) => {
+    await refuseAutoplay(page)
+    await mockBackend(page)
+    await page.goto('/')
+
+    const prompt = page.getByText('Press play to hear it')
+    await expect(prompt).toBeVisible()
+
+    const box = await prompt.boundingBox()
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    expect(box.x + box.width).toBeLessThanOrEqual(390)
+
+    const overflowsPage = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    expect(overflowsPage).toBe(false)
+  })
+
+  test('the prompt does not overlap the answer field below it', async ({ page }) => {
+    await refuseAutoplay(page)
+    await mockBackend(page)
+    await page.goto('/')
+
+    const prompt = page.getByText('Press play to hear it')
+    await expect(prompt).toBeVisible()
+
+    const promptBox = await prompt.boundingBox()
+    const fieldBox = await page.locator('input[lang="th"]').boundingBox()
+
+    expect(promptBox.y + promptBox.height).toBeLessThanOrEqual(fieldBox.y)
+  })
+})

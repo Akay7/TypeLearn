@@ -114,7 +114,11 @@ test.describe('the exercise fits on one screen', () => {
     await page.goto('/')
 
     const row = await field(page).locator('..').boundingBox()
-    const board = await page.getByRole('button', { name: 'Backspace' }).locator('../..').boundingBox()
+    // Backspace's panel: row > the fixed-width rows block > the horizontal
+    // scroll container > the padded panel — four levels, since the board now
+    // scrolls sideways below `--board` instead of shrinking (see
+    // OnScreenKeyboard.vue).
+    const board = await page.getByRole('button', { name: 'Backspace' }).locator('../../../..').boundingBox()
 
     // One column, not two of different widths.
     expect(Math.round(row.x)).toBe(Math.round(board.x))
