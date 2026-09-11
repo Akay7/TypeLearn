@@ -417,3 +417,9 @@ is built.
 
 Planning runs through [OpenSpec](openspec/): `openspec list` shows active changes,
 and `specs/roadmap.md` tracks milestone progress.
+
+## License
+
+AGPL-3.0-or-later — see [LICENSE](LICENSE). Running a modified copy of this
+project as a network service still requires offering that copy's source to its
+users.
