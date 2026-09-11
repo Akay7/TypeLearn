@@ -5,6 +5,51 @@ How a developer runs the whole application on their own machine: on a local
 Kubernetes cluster shaped like a deployment, so that what works here works there,
 and so several checkouts of this repository can run at once without colliding.
 ## Requirements
+### Requirement: Bring-up defaults to what a deployment runs
+`tilt up` with nothing set SHALL bring up the stack in the shape a deployment
+runs it: the images' production stages, the application's own server command,
+debug off, and no development-only affordance switched on. One switch SHALL turn
+on every development affordance together, and the two modes SHALL differ only in
+the values the chart is rendered with — not in which templates, cluster,
+namespace, port, or database they use.
+
+The default is the deployment shape because that is the arrangement that has to
+work. A mode nobody runs by accident is a mode whose breakage is found by a
+deployment rather than by the developer who caused it.
+
+#### Scenario: The default is the deployment shape
+- **WHEN** a developer runs `tilt up` without asking for development mode
+- **THEN** the backend runs the image's own server command with debug off, the
+  frontend serves its built bundle, nothing is synced into a pod, and the
+  application is reachable exactly as it is in development mode
+
+#### Scenario: One switch turns development on
+- **WHEN** a developer sets the development-mode switch and brings the stack up
+- **THEN** source is synced into the pods, the frontend runs its dev server with
+  hot reload, debug is on, and the database role may create the test database
+
+#### Scenario: Bring-up says which mode it is in
+- **WHEN** the stack is brought up in either mode
+- **THEN** it reports which one, so a developer never has to infer it from
+  behaviour
+
+#### Scenario: Asking for the debugger asks for development mode
+- **WHEN** a developer switches debugging on without setting the development-mode
+  switch
+- **THEN** development mode is turned on with it, because the debugger ships only
+  in the development image, and this is reported rather than done silently
+
+#### Scenario: Affordances that cannot work are not offered
+- **WHEN** the stack is up in the default mode
+- **THEN** the actions that depend on the development images — the buttons that
+  run the test suites in the pod — are absent rather than present and failing
+
+#### Scenario: The environment file is not rewritten to change mode
+- **WHEN** the mode is switched
+- **THEN** nothing a developer maintains by hand is edited: the configuration
+  file keeps its development values, and bring-up supplies the deployment-shaped
+  ones to the cluster itself
+
 ### Requirement: The stack runs on a local Kubernetes cluster
 Local development SHALL run the whole application — database, backend, and
 frontend — on a local `kind` cluster driven by Tilt, rather than a mixture of one
@@ -25,10 +70,17 @@ tooling currently selects.
   green
 
 #### Scenario: Code changes reach the running stack
-- **WHEN** a developer edits backend Python or frontend source
+- **WHEN** a developer edits backend Python or frontend source with development
+  mode on
 - **THEN** the change reaches the running pod without a manual rebuild or
   redeploy — synced for the backend, and hot-reloaded by the dev server for the
   frontend
+
+#### Scenario: The default mode rebuilds rather than syncs
+- **WHEN** a developer edits source without development mode on
+- **THEN** the change reaches the stack by rebuilding the image, because the pod
+  runs that image as built — which is the arrangement being proved, and the
+  reason the switch exists
 
 #### Scenario: Migrations run before the backend serves
 - **WHEN** the backend starts against a database that has pending migrations
@@ -68,10 +120,11 @@ tooling currently selects.
 The frontend and the backend SHALL be reached through a single origin, in a
 deployment and in every way the application is run locally — including a dev
 server running on the host outside the cluster. A Gateway SHALL route the
-backend's paths to the backend and everything else to the frontend; a host dev
-server SHALL proxy those same paths for the same reason. Consequently the backend
-SHALL NOT carry any cross-origin configuration: no way of running this
-application may be the only one where CORS is needed.
+backend's paths to the backend, the clips to whatever serves the media store, and
+everything else to the frontend; a host dev server SHALL proxy those same paths
+for the same reason. Consequently the backend SHALL NOT carry any cross-origin
+configuration: no way of running this application may be the only one where CORS
+is needed.
 
 #### Scenario: One origin serves both
 - **WHEN** the application is opened at the Gateway's address
@@ -89,10 +142,16 @@ application may be the only one where CORS is needed.
   list anywhere in them
 
 #### Scenario: Backend paths reach Django
-- **WHEN** a request arrives for the GraphQL endpoint, the media files, the
-  Django admin, or Django's static files
+- **WHEN** a request arrives for the GraphQL endpoint, the Django admin, or
+  Django's static files
 - **THEN** the Gateway routes it to the backend, while every other path falls
   through to the frontend
+
+#### Scenario: Clips reach the media server
+- **WHEN** a request arrives for a clip under the media path
+- **THEN** the Gateway routes it to the server that holds the media store, in
+  development exactly as in a deployment, so the path that serves the audio is
+  the same one in both
 
 #### Scenario: A dev server on the host is also one origin
 - **WHEN** the frontend is served from a dev server on the host and queries the

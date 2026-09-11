@@ -41,7 +41,7 @@ onBeforeUnmount(() => audio.value?.pause())
 </script>
 
 <template>
-  <div class="relative flex items-center">
+  <div class="relative flex flex-col items-center gap-1.5 sm:flex-row sm:gap-0">
     <audio ref="audio" :src="src" preload="auto" />
     <button
       type="button"
@@ -51,12 +51,20 @@ onBeforeUnmount(() => audio.value?.pause())
       ▶ Play
     </button>
 
-    <!-- Out of the flow, not merely beside the button: in the flow it would
-         widen the row and shove the control off the page's centre line, which
-         is the kind of movement this whole change exists to remove. -->
+    <!-- Below the button, in normal flow, on a phone-width screen: it only
+         adds height there, never width, so the button never shifts
+         sideways, and whatever sits below this component (AnswerInput) is
+         pushed down by exactly the room the prompt needs instead of being
+         overlapped by it — the earlier absolute-positioned version left it
+         overlapping AnswerInput once it was no longer off to the side.
+         From `sm` up (the same phone/tablet line `lib/device.js`
+         classifies on) there is room to the side instead, so it goes back
+         to sitting there, out of flow: in the flow at that width it would
+         widen the row and shove the button off the page's centre line,
+         which is the kind of movement this whole change exists to remove. -->
     <p
       v-if="blocked"
-      class="absolute left-full ml-3 w-max text-sm opacity-60"
+      class="text-center text-sm opacity-60 sm:absolute sm:top-1/2 sm:left-full sm:ml-3 sm:w-max sm:-translate-y-1/2 sm:text-left"
     >
       Press play to hear it
     </p>
