@@ -198,6 +198,12 @@ const SWITCH_WIDTH = 'w-14'
           :key="index"
           :class="['flex w-full gap-1', row.indent]"
         >
+          <!-- The label and the marker span sit on one line, with no line
+               break between them: Vue's whitespace condensing turns a
+               newline between the label text and the next element into a
+               literal trailing space in the button's text content, on every
+               key regardless of `cell.home` — which broke exact-text
+               assertions like `toContain('ฏ')` in practice.spec.js. -->
           <button
             v-for="cell in row.cells"
             :key="cell.kind === 'char' ? cell.char : cell.id"
@@ -219,10 +225,7 @@ const SWITCH_WIDTH = 'w-14'
             :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
             @mousedown.prevent
             @click="press(cell)"
-          >
-            {{ cell.label }}
-            <span v-if="cell.home" :class="HOME_MARKER_CLASSES" aria-hidden="true" />
-          </button>
+          >{{ cell.label }}<span v-if="cell.home" :class="HOME_MARKER_CLASSES" aria-hidden="true" /></button>
         </div>
 
         <div class="flex w-full justify-center gap-1">
