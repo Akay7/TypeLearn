@@ -39,7 +39,7 @@ jobs:
   chart:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # prerequisiteChecks off for lint alone: lint renders without a cluster and
       # cannot be told what one has, so the checks would report a missing
       # operator that the render steps below supply properly.
@@ -102,15 +102,15 @@ jobs:
       IMAGE: ${{ needs.setup.outputs.backend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push the backend candidate (runtime — what would ship)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/backend
           file: ./src/backend/Containerfile
@@ -124,7 +124,7 @@ jobs:
       # that group — same Python, same code — so the suite still runs inside the
       # artifact this run built rather than an environment assembled beside it.
       - name: Build and push the backend test stage
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/backend
           file: ./src/backend/Containerfile
@@ -144,15 +144,15 @@ jobs:
       IMAGE: ${{ needs.setup.outputs.frontend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push the frontend candidate (nginx, built bundle)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/frontend
           file: ./src/frontend/Containerfile
@@ -166,7 +166,7 @@ jobs:
       # pushed too and the two test jobs below run inside it — what is tested is
       # then what was actually installed, not a separately assembled environment.
       - name: Build and push the frontend test stage
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./src/frontend
           file: ./src/frontend/Containerfile
@@ -200,7 +200,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -226,7 +226,7 @@ jobs:
       IMAGE: ${{ needs.setup.outputs.frontend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -244,7 +244,7 @@ jobs:
       IMAGE: ${{ needs.setup.outputs.frontend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -269,8 +269,8 @@ jobs:
       FRONTEND_IMAGE: ${{ needs.setup.outputs.frontend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@v7
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -328,8 +328,8 @@ jobs:
       FRONTEND_IMAGE: ${{ needs.setup.outputs.frontend_image }}
       TAG: ${{ needs.setup.outputs.candidate_tag }}
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

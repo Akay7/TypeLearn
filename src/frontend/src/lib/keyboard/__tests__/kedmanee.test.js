@@ -126,6 +126,18 @@ describe('finger assignment', () => {
   it('gives the space bar to the thumb', () => {
     expect(KEDMANEE.space.finger).toBe('thumb')
   })
+
+  it('marks ด and ่ as the index fingers home keys, and marks nothing else', () => {
+    // ด and ่ sit under F and J on a Latin board — where an index finger rests
+    // when it isn't reaching for anything, not ก/เ or ่/า which the same
+    // fingers reach without resting there.
+    const homeRow = KEDMANEE.layers[0].rows[2]
+
+    expect(homeRow.filter((key) => key.home).map((key) => key.char)).toEqual(['ด', '่'])
+    // Two layers, one marked position each side — the flag follows the
+    // position onto every layer, not just the base one.
+    expect(allKeys().filter((key) => key.home)).toHaveLength(2 * KEDMANEE.layers.length)
+  })
 })
 
 describe('key labels', () => {

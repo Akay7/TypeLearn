@@ -75,36 +75,62 @@ watch(
   { immediate: true },
 )
 
-const KEY_CLASSES = 'h-12 rounded-lg text-lg transition-colors'
+const KEY_CLASSES = 'relative h-12 rounded-lg text-lg transition-colors'
+
+// The on-screen equivalent of the tactile bump a physical keyboard puts on F
+// and J: a short bar on the key an index finger rests on when it isn't
+// reaching anywhere, so a learner has an anchor to return to. A bar, not a
+// dot: a round dot reads as the dotted circle Kedmanee already draws under a
+// combining mark's label (◌ + the mark itself, in kedmanee.js) — and ่, the
+// right index finger's own home key, is one of those marks, so a dot there
+// would be mistaken for the character rather than an indicator about it. The
+// bar sits on its own visual channel regardless — a shape at the bottom of
+// the key rather than a colour or a border — so it survives being drawn
+// under the next-key highlight ring and over any finger tint. Sized as a
+// fraction of the key's own width rather than a fixed number of pixels, so it
+// scales sensibly on both a normal key and the narrower legend swatch.
+const HOME_MARKER_CLASSES =
+  'pointer-events-none absolute inset-x-0 bottom-1.5 mx-auto h-1 w-[45%] rounded-full bg-black/50 dark:bg-white/60'
 
 // A colour per finger, so the column a key belongs to is readable at a glance:
-// position alone does not say which finger reaches it. The two hands mirror
-// each other — one hue per finger rather than eight separate hues — because
-// four colours are told apart reliably and eight are not, and which hand is
-// never in doubt once the board is split down the middle.
+// position alone does not say which finger reaches it. Pinky, ring, and
+// middle still mirror across hands — one hue for both — because four colours
+// are told apart reliably and eight are not. The index fingers are the
+// exception: they anchor the home row, so knowing *which* index finger a key
+// belongs to matters more than it does for the others. Rather than a hue of
+// its own, the right index finger gets a different shade of the same blue —
+// close enough to read as "the other index finger" rather than an unrelated
+// finger, distinct enough to tell the two apart.
 const FINGER_TINT = {
   'l-pinky': 'bg-rose-500/15 hover:bg-rose-500/30 dark:bg-rose-400/20 dark:hover:bg-rose-400/35',
   'l-ring': 'bg-amber-500/15 hover:bg-amber-500/30 dark:bg-amber-400/20 dark:hover:bg-amber-400/35',
   'l-middle': 'bg-emerald-500/15 hover:bg-emerald-500/30 dark:bg-emerald-400/20 dark:hover:bg-emerald-400/35',
   'l-index': 'bg-sky-500/15 hover:bg-sky-500/30 dark:bg-sky-400/20 dark:hover:bg-sky-400/35',
-  'r-index': 'bg-sky-500/15 hover:bg-sky-500/30 dark:bg-sky-400/20 dark:hover:bg-sky-400/35',
+  'r-index': 'bg-blue-600/15 hover:bg-blue-600/30 dark:bg-blue-400/25 dark:hover:bg-blue-400/40',
   'r-middle': 'bg-emerald-500/15 hover:bg-emerald-500/30 dark:bg-emerald-400/20 dark:hover:bg-emerald-400/35',
   'r-ring': 'bg-amber-500/15 hover:bg-amber-500/30 dark:bg-amber-400/20 dark:hover:bg-amber-400/35',
   'r-pinky': 'bg-rose-500/15 hover:bg-rose-500/30 dark:bg-rose-400/20 dark:hover:bg-rose-400/35',
   thumb: 'bg-violet-500/15 hover:bg-violet-500/30 dark:bg-violet-400/20 dark:hover:bg-violet-400/35',
 }
 
-// One entry per finger of one hand: the mirror makes a second set redundant.
+// One entry per finger, except the mirrored trio (pinky/ring/middle) which
+// still cover both hands with one swatch each. The index fingers get one
+// entry per hand, since they are the pair this keyboard tells apart by colour.
 const LEGEND = [
   { finger: 'l-pinky', name: 'little', swatch: 'bg-rose-500/40' },
   { finger: 'l-ring', name: 'ring', swatch: 'bg-amber-500/40' },
   { finger: 'l-middle', name: 'middle', swatch: 'bg-emerald-500/40' },
-  { finger: 'l-index', name: 'index', swatch: 'bg-sky-500/40' },
+  { finger: 'l-index', name: 'left index', swatch: 'bg-sky-500/40' },
+  { finger: 'r-index', name: 'right index', swatch: 'bg-blue-600/40' },
   { finger: 'thumb', name: 'thumb', swatch: 'bg-violet-500/40' },
 ]
 
 const tint = (finger) => FINGER_TINT[finger] ?? ''
 const fingerName = (finger) => FINGER_NAMES[finger] ?? ''
+
+// Read out alongside the finger name, so the marker means the same thing to a
+// screen reader that it does visually.
+const homeSuffix = (cell) => (cell.home ? ', rest position' : '')
 
 // Now that the key backgrounds carry finger colour, an indigo highlight would
 // be one more hue competing with them. Maximum contrast against every tint,
@@ -172,6 +198,12 @@ const SWITCH_WIDTH = 'w-14'
           :key="index"
           :class="['flex w-full gap-1', row.indent]"
         >
+          <!-- The label and the marker span sit on one line, with no line
+               break between them: Vue's whitespace condensing turns a
+               newline between the label text and the next element into a
+               literal trailing space in the button's text content, on every
+               key regardless of `cell.home` — which broke exact-text
+               assertions like `toContain('ฏ')` in practice.spec.js. -->
           <button
             v-for="cell in row.cells"
             :key="cell.kind === 'char' ? cell.char : cell.id"
@@ -185,13 +217,15 @@ const SWITCH_WIDTH = 'w-14'
               highlighted(cell) ? ACTIVE_CLASSES : '',
             ]"
             :title="fingerName(cell.finger)"
-            :aria-label="cell.kind === 'char' ? `${cell.char}, ${fingerName(cell.finger)}` : cell.ariaLabel"
+            :aria-label="
+              cell.kind === 'char'
+                ? `${cell.char}, ${fingerName(cell.finger)}${homeSuffix(cell)}`
+                : cell.ariaLabel
+            "
             :aria-pressed="cell.kind === 'modifier' ? cell.active : undefined"
             @mousedown.prevent
             @click="press(cell)"
-          >
-            {{ cell.label }}
-          </button>
+          >{{ cell.label }}<span v-if="cell.home" :class="HOME_MARKER_CLASSES" aria-hidden="true" /></button>
         </div>
 
         <div class="flex w-full justify-center gap-1">
@@ -240,13 +274,23 @@ const SWITCH_WIDTH = 'w-14'
         {{ shown.shortName }}
       </button>
 
-      <!-- Colour is only half an answer without the names, and the hands mirror,
-           so one set of five covers both. flex-wrap so a narrow panel wraps
-           the legend onto a second line rather than overflowing it. -->
+      <!-- Colour is only half an answer without the names. Most fingers still
+           mirror across hands and share one entry, but the index fingers get
+           one each since telling them apart is the point; flex-wrap lets a
+           narrow panel wrap the legend onto a second line rather than
+           overflowing it. -->
       <ul class="flex grow flex-wrap justify-center gap-x-4 gap-y-1 text-xs opacity-70">
         <li v-for="item in LEGEND" :key="item.finger" class="flex items-center gap-1.5">
           <span :class="['size-3 rounded-sm', item.swatch]" />
           {{ item.name }}
+        </li>
+        <!-- Not a finger colour, so it sits outside the data-driven list: the
+             dot itself, on a neutral swatch, explained the way each colour is. -->
+        <li class="flex items-center gap-1.5">
+          <span class="relative size-3 rounded-sm bg-black/10 dark:bg-white/10">
+            <span :class="HOME_MARKER_CLASSES" />
+          </span>
+          rest position
         </li>
       </ul>
 

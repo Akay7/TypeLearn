@@ -331,6 +331,50 @@ test.describe('the keyboard is one board', () => {
   })
 })
 
+test.describe('finger guidance', () => {
+  // ด and เ are both left-index keys on the home row; ่ is the right-index
+  // home key. Their aria-labels start with the character, a comma, then the
+  // finger name and — for a home key — ", rest position".
+  const key = (page, char) => page.locator(`button[aria-label^="${char},"]`)
+
+  test('the two index fingers are shown in different colours', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    const leftIndexTint = await key(page, 'ด').getAttribute('class')
+    const rightIndexTint = await key(page, '่').getAttribute('class')
+
+    const backgroundClasses = (classAttr) =>
+      classAttr.split(' ').filter((name) => name.startsWith('bg-'))
+
+    expect(backgroundClasses(leftIndexTint)).not.toEqual(backgroundClasses(rightIndexTint))
+  })
+
+  test('the two index fingers home keys are marked, and their other keys are not', async ({
+    page,
+  }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    await expect(key(page, 'ด')).toHaveAttribute('aria-label', /rest position/)
+    await expect(key(page, '่')).toHaveAttribute('aria-label', /rest position/)
+
+    // เ and ้ are the same two fingers' *other* home-row column — reached, not
+    // rested on — so they carry no marker.
+    await expect(key(page, 'เ')).not.toHaveAttribute('aria-label', /rest position/)
+    await expect(key(page, '้')).not.toHaveAttribute('aria-label', /rest position/)
+  })
+
+  test('the legend explains both the index colours and the marker', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    await expect(page.getByText('left index')).toBeVisible()
+    await expect(page.getByText('right index')).toBeVisible()
+    await expect(page.getByText('rest position')).toBeVisible()
+  })
+})
+
 /** The sentence with its last character swapped — same length, wrong answer. */
 function wrongAnswerFor(sentence) {
   const chars = [...sentence]

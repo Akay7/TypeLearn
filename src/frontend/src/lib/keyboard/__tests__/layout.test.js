@@ -244,3 +244,39 @@ describe('a position keeps its finger', () => {
     expect(fingers(fixture)).toEqual(fingers(KEDMANEE))
   })
 })
+
+describe('the index fingers rest on exactly one key each', () => {
+  const fixture = threeLayerFixture()
+
+  /** Every `home` flag of a layout, flattened in the same shape as `shapeOf`. */
+  const homes = (layout, layer = 0) =>
+    layout.layers[layer].rows.map((keys) => keys.map((key) => key.home))
+
+  it('marks only the home row keys under the left and right index fingers', () => {
+    // Row 2 is the home row on the ANSI board; columns 3 and 6 are F and J —
+    // the two positions an index finger rests on, not the two it reaches
+    // (columns 4 and 5) while it is pressing something else.
+    const flags = homes(fixture)[2]
+
+    expect(flags).toEqual([false, false, false, true, false, false, true, false, false, false, false])
+  })
+
+  it('marks no key outside the home row', () => {
+    const flags = homes(fixture)
+
+    expect(flags[0].some(Boolean)).toBe(false)
+    expect(flags[1].some(Boolean)).toBe(false)
+    expect(flags[3].some(Boolean)).toBe(false)
+  })
+
+  it('does not depend on the layer', () => {
+    fixture.layers.forEach((_, layer) => {
+      expect(homes(fixture, layer)).toEqual(homes(fixture, 0))
+    })
+  })
+
+  it('does not depend on the layout', () => {
+    // The home position belongs to the board, exactly like the finger it marks.
+    expect(homes(fixture)).toEqual(homes(KEDMANEE))
+  })
+})
