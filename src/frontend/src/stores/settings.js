@@ -5,6 +5,7 @@ import { useIsPhone } from '../lib/device'
 
 const OVERRIDE_KEY = 'typelearn.virtualKeyboardOverride'
 const KEYBOARD_KEY = 'typelearn.onScreenKeyboardVisible'
+const COMPLETION_STATS_KEY = 'typelearn.showCompletionStats'
 
 // 'auto' follows the device classification; 'on'/'off' force the virtual
 // keyboard either way, for the cases classification gets wrong in either
@@ -53,6 +54,25 @@ function saveKeyboardVisible(value) {
   }
 }
 
+/** Shown by default, the same as the on-screen keyboard: a learner has to
+ * opt out of the post-check summary rather than opt in. */
+function loadCompletionStatsVisible() {
+  try {
+    const stored = window.localStorage.getItem(COMPLETION_STATS_KEY)
+    return stored === null ? true : stored === 'true'
+  } catch {
+    return true
+  }
+}
+
+function saveCompletionStatsVisible(value) {
+  try {
+    window.localStorage.setItem(COMPLETION_STATS_KEY, String(value))
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   const virtualKeyboardOverride = ref(loadOverride())
   const isPhone = useIsPhone()
@@ -63,10 +83,16 @@ export const useSettingsStore = defineStore('settings', () => {
   // something they are not reading off of.
   const onScreenKeyboardVisible = ref(loadKeyboardVisible())
 
+  // Independent of both settings above: whether a correct check shows the
+  // post-check summary (and waits for the learner) or behaves as it always
+  // has (verdict, then straight to the next exercise).
+  const showCompletionStats = ref(loadCompletionStatsVisible())
+
   // Synchronous, not batched: the choice should survive a tab closed right
   // after it's made, not wait for a tick that might not come.
   watch(virtualKeyboardOverride, saveOverride, { flush: 'sync' })
   watch(onScreenKeyboardVisible, saveKeyboardVisible, { flush: 'sync' })
+  watch(showCompletionStats, saveCompletionStatsVisible, { flush: 'sync' })
 
   // What AnswerInput.vue actually needs: one boolean, the override applied
   // over the device default.
@@ -76,5 +102,10 @@ export const useSettingsStore = defineStore('settings', () => {
     return !isPhone.value
   })
 
-  return { virtualKeyboardOverride, virtualKeyboardEnabled, onScreenKeyboardVisible }
+  return {
+    virtualKeyboardOverride,
+    virtualKeyboardEnabled,
+    onScreenKeyboardVisible,
+    showCompletionStats,
+  }
 })

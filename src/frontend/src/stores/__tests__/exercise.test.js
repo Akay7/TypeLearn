@@ -3,8 +3,22 @@ import { nextTick } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useExerciseStore } from '../exercise'
+import { useSettingsStore } from '../settings'
+import { useStatsStore } from '../stats'
 
 const SENTENCE = 'สวัสดี'
+
+// A fake `localStorage`, in-memory and fresh for every test — otherwise
+// `lib/stats.js`'s own in-memory fallback (module-level, so it would
+// otherwise survive across tests in this file) carries counts from one test
+// into the next.
+function fakeStorage() {
+  const data = new Map()
+  return {
+    getItem: (key) => (data.has(key) ? data.get(key) : null),
+    setItem: (key, value) => data.set(key, String(value)),
+  }
+}
 
 /** A store with a deck already in place, so no fetch is involved. */
 function storeWithDeck(sentences = [SENTENCE, 'ขอบคุณ']) {
@@ -33,6 +47,9 @@ async function type(store, text) {
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.useFakeTimers()
+
+  globalThis.window = globalThis.window ?? {}
+  window.localStorage = fakeStorage()
 })
 
 afterEach(() => {
@@ -97,8 +114,12 @@ describe('the answer checks itself', () => {
 })
 
 describe('advancing after a correct answer', () => {
-  it('presents the next exercise once the verdict has been read', async () => {
+  // The post-check summary defaults to on, and takes over advancing when it
+  // shows (see the tests below) — these are about the fixed-delay
+  // auto-advance itself, which is what happens with it off.
+  it('presents the next exercise once the verdict has been read, with the completion-stats setting off', async () => {
     const store = storeWithDeck()
+    useSettingsStore().showCompletionStats = false
 
     await type(store, SENTENCE)
     expect(store.current.sentence).toBe(SENTENCE)
@@ -111,8 +132,9 @@ describe('advancing after a correct answer', () => {
     expect(store.result).toBe(null)
   })
 
-  it('does not advance an answer that was typed past correct', async () => {
+  it('does not advance an answer that was typed past correct, with the completion-stats setting off', async () => {
     const store = storeWithDeck()
+    useSettingsStore().showCompletionStats = false
 
     await type(store, SENTENCE)
     await type(store, 'ก')
@@ -125,6 +147,103 @@ describe('advancing after a correct answer', () => {
     await nextTick()
 
     expect(store.current.sentence).toBe(SENTENCE)
+  })
+
+  it('does not advance on its own with the completion-stats setting on (the default)', async () => {
+    const store = storeWithDeck()
+
+    await type(store, SENTENCE)
+    expect(store.result).toBe('correct')
+
+    vi.runAllTimers()
+    await nextTick()
+
+    expect(store.current.sentence).toBe(SENTENCE)
+  })
+
+  it('advances once next() is called explicitly, with the completion-stats setting on', async () => {
+    const store = storeWithDeck()
+
+    await type(store, SENTENCE)
+    expect(store.result).toBe('correct')
+
+    store.next()
+
+    expect(store.current.sentence).toBe('ขอบคุณ')
+    expect(store.typed).toBe('')
+    expect(store.result).toBe(null)
+  })
+})
+
+describe('practice stats are recorded as the learner types', () => {
+  it('records one key press and one correct symbol for a correct character', async () => {
+    const store = storeWithDeck()
+    const stats = useStatsStore()
+
+    store.append(SENTENCE[0])
+    await nextTick()
+
+    expect(stats.today.keysPressed).toBe(1)
+    expect(stats.today.symbolsCorrect).toBe(1)
+  })
+
+  it('records two key presses and zero correct symbols for a wrong character then its correction', async () => {
+    const store = storeWithDeck()
+    const stats = useStatsStore()
+
+    // 'ก' is not this sentence's first expected character.
+    store.append('ก')
+    store.backspace()
+    await nextTick()
+
+    expect(stats.today.keysPressed).toBe(2)
+    expect(stats.today.symbolsCorrect).toBe(0)
+  })
+
+  it('accumulates key presses and correct symbols across a whole correct answer', async () => {
+    const store = storeWithDeck()
+    const stats = useStatsStore()
+
+    await type(store, SENTENCE)
+
+    expect(stats.today.keysPressed).toBe([...SENTENCE].length)
+    expect(stats.today.symbolsCorrect).toBe([...SENTENCE].length)
+  })
+
+  it('records one completed exercise on a correct check', async () => {
+    const store = storeWithDeck()
+    const stats = useStatsStore()
+
+    await type(store, SENTENCE)
+
+    expect(stats.today.exercisesCompleted).toBe(1)
+  })
+
+  it('does not double-count a re-confirmed check of the same correct answer', async () => {
+    const store = storeWithDeck()
+    useSettingsStore().showCompletionStats = false
+    const stats = useStatsStore()
+
+    await type(store, SENTENCE)
+    // The Check control stays live during the pre-advance delay; pressing it
+    // again must not count a second completion for the one exercise.
+    store.check()
+
+    expect(stats.today.exercisesCompleted).toBe(1)
+  })
+
+  it('does not count the reset to a fresh exercise as backspaces', async () => {
+    const store = storeWithDeck()
+    useSettingsStore().showCompletionStats = false
+    const stats = useStatsStore()
+
+    await type(store, SENTENCE)
+    vi.runAllTimers()
+    await nextTick()
+
+    // Advancing cleared `typed` back to '' on its own; that must not also
+    // register as `SENTENCE.length` backspaces.
+    expect(stats.today.keysPressed).toBe([...SENTENCE].length)
   })
 })
 

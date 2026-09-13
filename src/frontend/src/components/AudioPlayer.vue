@@ -13,11 +13,13 @@ const audio = ref(null)
 // exercise's automatic play succeeds, and the prompt does not come back.
 const blocked = ref(false)
 
-async function play() {
-  // Rewind first, so pressing the control mid-clip replays it from the start
-  // instead of resuming or doing nothing.
-  audio.value.currentTime = 0
+// Mirrors the `<audio>` element's own state via its `play`/`pause`/`ended`
+// events, rather than being set only where this component calls `.play()`
+// or `.pause()` itself — so the control's label is correct even when
+// playback starts or stops for a reason this component didn't initiate.
+const playing = ref(false)
 
+async function attemptPlay() {
   try {
     await audio.value.play()
     blocked.value = false
@@ -29,11 +31,37 @@ async function play() {
   }
 }
 
+/** Only ever called once, on mount: the exercise's own clip, from the start. */
+function playFromStart() {
+  audio.value.currentTime = 0
+  return attemptPlay()
+}
+
+/**
+ * The control's click handler. While the clip is playing, the control reads
+ * as Pause and this just pauses it in place. Otherwise it plays — rewinding
+ * first only if the clip already reached its end, so a clip paused partway
+ * through resumes from there instead of restarting, and a clip that finished
+ * on its own starts over.
+ */
+function toggle() {
+  if (playing.value) {
+    audio.value.pause()
+    return
+  }
+
+  if (audio.value.ended) {
+    audio.value.currentTime = 0
+  }
+
+  return attemptPlay()
+}
+
 // The exercise is something the learner is meant to hear before typing, so the
 // clip starts itself. `SentenceView` keys this component on the exercise id, so
 // a new exercise mounts a new player and this is all "play the current clip"
 // needs to be — there is no stale `src` left to play by mistake.
-onMounted(play)
+onMounted(playFromStart)
 
 // Advancing while a clip is still running would otherwise leave the old audio
 // overlapping the new exercise's; teardown alone is not a promise of silence.
@@ -42,13 +70,20 @@ onBeforeUnmount(() => audio.value?.pause())
 
 <template>
   <div class="relative flex flex-col items-center gap-1.5 sm:flex-row sm:gap-0">
-    <audio ref="audio" :src="src" preload="auto" />
+    <audio
+      ref="audio"
+      :src="src"
+      preload="auto"
+      @play="playing = true"
+      @pause="playing = false"
+      @ended="playing = false"
+    />
     <button
       type="button"
-      class="rounded-full bg-indigo-600 px-6 py-3 text-base font-medium text-white transition hover:bg-indigo-500"
-      @click="play"
+      class="inline-flex w-32 items-center justify-center whitespace-nowrap rounded-full bg-indigo-600 px-6 py-3 text-base font-medium text-white transition hover:bg-indigo-500"
+      @click="toggle"
     >
-      ▶ Play
+      {{ playing ? '⏸ Pause' : '▶ Play' }}
     </button>
 
     <!-- Below the button, in normal flow, on a phone-width screen: it only

@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
-import { compare, dropLast, isComplete } from '../lib/checking'
+import { compare, dropLast, isComplete, nextExpected } from '../lib/checking'
 import { layoutFor, layoutsAvailable, withoutUnreachable } from '../lib/keyboard'
+import { useSettingsStore } from './settings'
+import { useStatsStore } from './stats'
 
 // A path, never a URL. The application is served from one origin in every
 // environment — behind the Gateway in the cluster and in a deployment, and
@@ -39,6 +41,9 @@ function shuffle(items) {
 }
 
 export const useExerciseStore = defineStore('exercise', () => {
+  const settingsStore = useSettingsStore()
+  const statsStore = useStatsStore()
+
   // The catalog in the order this session will practise it, and where we are in
   // it. Shuffled once at load, so no exercise repeats until it wraps.
   const deck = ref([])
@@ -106,6 +111,19 @@ export const useExerciseStore = defineStore('exercise', () => {
     }
   }
 
+  // Guards the `typed` watcher below against counting a programmatic reset —
+  // advancing to the next exercise, loading a fresh deck — as backspacing by
+  // hand. `flush: 'sync'` on that watcher is what makes toggling this flag
+  // around the assignment reliable: the watcher runs within this same
+  // synchronous call, before the flag is lowered again.
+  let resettingTyped = false
+
+  function resetTyped() {
+    resettingTyped = true
+    typed.value = ''
+    resettingTyped = false
+  }
+
   async function load() {
     status.value = 'loading'
 
@@ -142,7 +160,7 @@ export const useExerciseStore = defineStore('exercise', () => {
 
       deck.value = shuffle(practisable)
       index.value = 0
-      typed.value = ''
+      resetTyped()
       result.value = null
       status.value = deck.value.length ? 'ready' : 'empty'
     } catch (error) {
@@ -160,19 +178,71 @@ export const useExerciseStore = defineStore('exercise', () => {
     typed.value = dropLast(typed.value)
   }
 
+  /**
+   * Counts one keystroke change, and any newly-typed characters that were
+   * correct at the moment they were typed.
+   *
+   * The key-press count is the raw length delta — 1 for the overwhelmingly
+   * common case of one character appended or removed, but never assumed to
+   * be exactly 1, so a wrong key immediately corrected still counts as two
+   * presses and zero correct symbols. Each newly-appended character (never
+   * on a deletion) is checked against `nextExpected` — the same next-key
+   * logic the keyboard's own highlight already uses — one character at a
+   * time against the prefix as it stood before that character, so a run of
+   * several new characters (a paste, in the rare case) is judged position by
+   * position rather than all against the answer's very first character.
+   */
+  function recordKeystrokeStats(oldTyped, newTyped) {
+    const oldChars = [...oldTyped]
+    const newChars = [...newTyped]
+
+    statsStore.recordKeyPress(Math.abs(newChars.length - oldChars.length))
+
+    if (newChars.length <= oldChars.length || !current.value) {
+      return
+    }
+
+    let correct = 0
+    let prefix = oldTyped
+
+    for (let i = oldChars.length; i < newChars.length; i += 1) {
+      if (newChars[i] === nextExpected(prefix, current.value.sentence)) {
+        correct += 1
+      }
+      prefix += newChars[i]
+    }
+
+    if (correct > 0) {
+      statsStore.recordCorrectSymbols(correct)
+    }
+  }
+
   // Every way of changing the answer ends here — on-screen keys through
   // `append`, the physical keyboard through the input's `v-model` — so this is
-  // the one place that sees all typing. Two things follow from every change:
-  // the previous verdict described an older answer and has to go, and an answer
+  // the one place that sees all typing. Three things follow from every change,
+  // skipped only for the programmatic reset `resetTyped` guards against: the
+  // keystroke (and any correct symbols) is recorded for the stats display; the
+  // previous verdict described an older answer and has to go; and an answer
   // that has reached the target's length is a finished attempt worth judging
-  // without the learner having to ask.
-  watch(typed, () => {
-    result.value = null
+  // without the learner having to ask. `flush: 'sync'` is what makes that guard
+  // reliable — see `resetTyped`.
+  watch(
+    typed,
+    (newTyped, oldTyped) => {
+      if (resettingTyped) {
+        return
+      }
 
-    if (current.value && isComplete(typed.value, current.value.sentence)) {
-      check()
-    }
-  })
+      recordKeystrokeStats(oldTyped, newTyped)
+
+      result.value = null
+
+      if (current.value && isComplete(newTyped, current.value.sentence)) {
+        check()
+      }
+    },
+    { flush: 'sync' },
+  )
 
   function check() {
     if (!current.value) {
@@ -185,12 +255,27 @@ export const useExerciseStore = defineStore('exercise', () => {
     cancelAdvance()
 
     const correct = compare(typed.value, current.value.sentence)
+    // Caught before overwriting `result`: with the summary off, the Check
+    // control stays live during the delay before auto-advance, and pressing
+    // it again while already correct must re-confirm the same verdict rather
+    // than counting a second completion for the one exercise.
+    const wasAlreadyCorrect = result.value === 'correct'
     result.value = correct ? 'correct' : 'incorrect'
 
     // Checking is client-side for the MVP: nothing is sent, no Progress row is
     // written. Only the move to the next exercise happens on its own.
     if (correct) {
-      advanceTimer = setTimeout(next, ADVANCE_DELAY_MS)
+      if (!wasAlreadyCorrect) {
+        statsStore.recordExerciseCompleted()
+      }
+
+      // The post-check summary (see AnswerInput.vue) takes over advancing
+      // when it is going to show — it calls `next()` once the learner is
+      // ready, rather than on this fixed delay. Off, this is exactly the
+      // auto-advance the app has always done.
+      if (!settingsStore.showCompletionStats) {
+        advanceTimer = setTimeout(next, ADVANCE_DELAY_MS)
+      }
     }
   }
 
@@ -207,7 +292,7 @@ export const useExerciseStore = defineStore('exercise', () => {
     }
 
     index.value = (index.value + 1) % deck.value.length
-    typed.value = ''
+    resetTyped()
     result.value = null
   }
 

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { LONGEST, clickThrough, mockBackend, sentenceOnScreen } from './fixtures'
+import { LONGEST, clickThrough, disableCompletionStats, mockBackend, sentenceOnScreen } from './fixtures'
 
 // The board's rows total `--board` wide (see src/style.css), far past a phone
 // viewport, and stay that size rather than shrinking keys below a tappable
@@ -25,6 +25,10 @@ test.describe('the keyboard board on a phone-sized viewport', () => {
   test('the longest sentence can still be typed key by key, off-screen keys included', async ({ page }) => {
     await mockBackend(page, [LONGEST])
     await page.goto('/')
+    // This test is about the keyboard reaching every key, not the post-check
+    // summary — plain verdict + immediate advance is the simplest way to
+    // confirm what was typed was actually judged correct.
+    await disableCompletionStats(page)
     const sentence = await sentenceOnScreen(page)
 
     await clickThrough(page, sentence)

@@ -32,6 +32,12 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          // Unset, this is Playwright's own downloaded browser, same as
+          // always. Some environments (a sandbox with no network to fetch
+          // it, but a system Chromium already on PATH) have no other way to
+          // run this suite at all; pointing at that binary instead is opt-in
+          // and never changes what the pod or a developer's machine does.
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined,
           args: [
             // The learner's browser decides whether a clip may start on its own,
             // and every browser decides differently. Granting it here keeps the

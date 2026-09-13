@@ -135,7 +135,17 @@ const homeSuffix = (cell) => (cell.home ? ', rest position' : '')
 // Now that the key backgrounds carry finger colour, an indigo highlight would
 // be one more hue competing with them. Maximum contrast against every tint,
 // in the page's own black and white, keeps the next key unmistakable.
-const ACTIVE_CLASSES = 'ring-2 ring-black font-semibold dark:ring-white'
+//
+// `ring-inset`: a plain `ring` is a box-shadow drawn *outside* the button's
+// own border box, and the row it sits in scrolls sideways on a narrow board
+// (`overflow-x-auto` on the wrapper below) — which, per the CSS overflow
+// spec, also resolves that wrapper's `overflow-y` from `visible` to `auto`,
+// since one axis can't stay `visible` once the other isn't. That clips 2px
+// of outset ring off whichever edge has no neighbouring row to give it
+// clearance — the top of the first row is the only edge that's ever flush
+// against the wrapper's own edge with nothing above it. Drawing the ring
+// inside the key's box instead needs no clearance at all.
+const ACTIVE_CLASSES = 'ring-2 ring-inset ring-black font-semibold dark:ring-white'
 
 /** Whether this cell is the one worth pressing right now. */
 function highlighted(cell) {

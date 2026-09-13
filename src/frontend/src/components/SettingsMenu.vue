@@ -36,6 +36,18 @@ const GROUPS = [
       { value: false, label: 'Hide', description: 'Type on your own keyboard alone' },
     ],
   },
+  {
+    field: 'showCompletionStats',
+    title: 'Post-check summary',
+    // Labeled Enabled/Disabled rather than reusing Show/Hide (already the
+    // on-screen keyboard group's labels) or On/Off (already the virtual
+    // keyboard override group's) — every option in this menu needs an
+    // accessible name unique across the whole popover.
+    options: [
+      { value: true, label: 'Enabled', description: "Today's and the last 7 days' practice, plus a replay" },
+      { value: false, label: 'Disabled', description: 'Go straight to the next exercise' },
+    ],
+  },
 ]
 
 function choose(group, value) {

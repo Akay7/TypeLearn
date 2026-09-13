@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { mockBackend, sentenceOnScreen } from './fixtures'
+import { disableCompletionStats, mockBackend, sentenceOnScreen } from './fixtures'
 
 const field = (page) => page.locator('input[lang="th"]')
 const settingsButton = (page) => page.getByRole('button', { name: 'Settings' })
@@ -87,6 +87,8 @@ test.describe('the on-screen keyboard, separately from the OS one', () => {
   test('Hide removes the board; a physical keyboard still works', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    // Only the final '✓ Correct' confirmation below cares about this setting.
+    await disableCompletionStats(page)
     const sentence = await sentenceOnScreen(page)
     await expect(page.getByRole('button', { name: 'Backspace' })).toBeVisible()
 

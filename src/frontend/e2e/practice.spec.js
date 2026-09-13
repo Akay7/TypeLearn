@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { LONGEST, SENTENCES, clickThrough, mockBackend, sentenceOnScreen } from './fixtures'
+import { LONGEST, SENTENCES, clickThrough, disableCompletionStats, mockBackend, sentenceOnScreen } from './fixtures'
 
 const field = (page) => page.locator('input[lang="th"]')
 
@@ -8,6 +8,9 @@ test.describe('the answer checks itself', () => {
   test('the last character checks the answer, with nothing else pressed', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    // The post-check summary (on by default) replaces the plain verdict this
+    // test looks for; it's covered on its own in completion-stats.spec.js.
+    await disableCompletionStats(page)
 
     const sentence = await sentenceOnScreen(page)
     await clickThrough(page, sentence)
@@ -143,6 +146,11 @@ test.describe('a verdict does not move the page', () => {
   test('the input and the keyboard hold their positions across a check', async ({ page }) => {
     await mockBackend(page, ONE)
     await page.goto('/')
+    // With the post-check summary on (the default), a correct check replaces
+    // the field itself rather than moving it — that narrower guarantee is
+    // covered in completion-stats.spec.js. This test is about the field
+    // staying put, which still holds with the summary off.
+    await disableCompletionStats(page)
 
     const before = await anchors(page)
 
@@ -183,9 +191,14 @@ test.describe('a verdict does not move the page', () => {
 })
 
 test.describe('the loop continues', () => {
+  // All three tests here are about the automatic-advance loop itself, which
+  // the post-check summary (on by default) gates behind an explicit "Next
+  // exercise" instead — that flow has its own tests in
+  // completion-stats.spec.js.
   test('a correct answer brings the next exercise, empty and unjudged', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    await disableCompletionStats(page)
 
     const sentence = await sentenceOnScreen(page)
     await field(page).fill(sentence)
@@ -200,6 +213,7 @@ test.describe('the loop continues', () => {
   test('the keyboard points at the first character of the new sentence', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    await disableCompletionStats(page)
 
     const sentence = await sentenceOnScreen(page)
     await field(page).fill(sentence)
@@ -214,6 +228,11 @@ test.describe('the loop continues', () => {
   test('typing past a correct answer stays on the exercise instead of advancing', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    // With the summary on, the field is replaced the instant the answer is
+    // correct, so there is nothing left to overtype into — this scenario is
+    // specifically about the field surviving a correct check, which only
+    // happens with the summary off.
+    await disableCompletionStats(page)
 
     const sentence = await sentenceOnScreen(page)
     await field(page).fill(sentence)
@@ -277,6 +296,8 @@ test.describe('the keyboard is one board', () => {
     // point at the key — which is what a Thai typist does.
     await mockBackend(page, ['ขอบคุณ!'])
     await page.goto('/')
+    // Only the final '✓ Correct' confirmation below cares about this setting.
+    await disableCompletionStats(page)
 
     const sentence = await sentenceOnScreen(page)
     expect(sentence).toBe('ขอบคุณ!')

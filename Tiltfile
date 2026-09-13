@@ -59,6 +59,24 @@ if k8s_context() != ALLOWED_CONTEXT:
          "`kubectl config use-context " + ALLOWED_CONTEXT + "`, or set TYPELEARN_KUBE_CONTEXT " +
          "if this project's cluster is named differently.")
 
+
+# --- Build-image garbage collection ------------------------------------------
+# Every live-reload rebuild retags the frontend/backend image and orphans the
+# previous one. Left alone, weeks of `tilt up` pile up hundreds of dangling
+# images (and, when a build is killed mid-run, buildkit working containers) that
+# no `podman image prune` can reclaim until they age out. Tilt runs its own
+# `docker`/`podman` prune after builds: drop dangling images and build cache
+# older than 6h, but only once an hour and never in the first few builds of a
+# session, so a rebuild loop still hits warm cache.
+docker_prune_settings(
+    disable=False,
+    max_age_mins=360,
+    num_builds=0,
+    interval_hrs=1,
+    keep_recent=2,
+)
+
+
 # --- Worktree identity --------------------------------------------------------
 def _wt(field):
     return str(local("./scripts/worktree-env.sh %s" % field, quiet=True, echo_off=True)).strip()

@@ -120,3 +120,15 @@ export async function clickThrough(page, text) {
     await page.locator(`button[aria-label^="${char},"]`).click()
   }
 }
+
+/**
+ * Opens the settings menu and turns the post-check summary off.
+ *
+ * The setting defaults to on, so any test that is really about the plain
+ * verdict + auto-advance loop — rather than the summary itself, covered in
+ * `completion-stats.spec.js` — calls this first to get that behavior back.
+ */
+export async function disableCompletionStats(page) {
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('radio', { name: 'Disabled' }).click()
+}

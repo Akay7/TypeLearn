@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { mockBackend, refuseAutoplay, sentenceOnScreen } from './fixtures'
+import { disableCompletionStats, mockBackend, refuseAutoplay, sentenceOnScreen } from './fixtures'
 
 test.describe('the clip plays before the learner types', () => {
   test('plays on its own when the exercise is presented', async ({ page }) => {
@@ -81,11 +81,16 @@ test.describe('the clip plays before the learner types', () => {
     await expect(page.getByRole('button', { name: 'Backspace' })).toBeVisible()
   })
 
-  test('replaying restarts from the beginning', async ({ page }) => {
+  test('playing again after the clip ends restarts from the beginning', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
 
-    await expect.poll(() => page.evaluate(() => document.querySelector('audio').currentTime > 0)).toBe(true)
+    // The stub clip is a couple of seconds long; this waits for it to
+    // actually finish rather than clicking while it's still playing — doing
+    // that pauses it instead (see "pausing" below).
+    await expect
+      .poll(() => page.evaluate(() => document.querySelector('audio').ended), { timeout: 5000 })
+      .toBe(true)
 
     await page.getByRole('button', { name: '▶ Play' }).click()
     const restarted = await page.evaluate(() => document.querySelector('audio').currentTime)
@@ -94,9 +99,52 @@ test.describe('the clip plays before the learner types', () => {
     expect(restarted).toBeLessThan(0.2)
   })
 
+  test('the control reads Pause while the clip plays automatically', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    await expect(page.getByRole('button', { name: '⏸ Pause' })).toBeVisible()
+  })
+
+  test('pausing stops the clip and keeps its position', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    await expect.poll(() => page.evaluate(() => document.querySelector('audio').currentTime > 0)).toBe(true)
+
+    await page.getByRole('button', { name: '⏸ Pause' }).click()
+    const pausedAt = await page.evaluate(() => document.querySelector('audio').currentTime)
+
+    await expect(page.getByRole('button', { name: '▶ Play' })).toBeVisible()
+    expect(await page.evaluate(() => document.querySelector('audio').paused)).toBe(true)
+
+    // The position holds rather than drifting while paused.
+    await page.waitForTimeout(200)
+    expect(await page.evaluate(() => document.querySelector('audio').currentTime)).toBeCloseTo(pausedAt, 1)
+  })
+
+  test('playing again after a pause resumes rather than restarting', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+
+    await expect.poll(() => page.evaluate(() => document.querySelector('audio').currentTime > 0)).toBe(true)
+    await page.getByRole('button', { name: '⏸ Pause' }).click()
+    const pausedAt = await page.evaluate(() => document.querySelector('audio').currentTime)
+
+    await page.getByRole('button', { name: '▶ Play' }).click()
+    await expect(page.getByRole('button', { name: '⏸ Pause' })).toBeVisible()
+
+    const resumedFrom = await page.evaluate(() => document.querySelector('audio').currentTime)
+    expect(resumedFrom).toBeGreaterThanOrEqual(pausedAt - 0.05)
+  })
+
   test('the previous clip does not run under the next exercise', async ({ page }) => {
     await mockBackend(page)
     await page.goto('/')
+    // Depends on the automatic advance, which only happens with the summary
+    // off — with it on (the default), advancing waits for "Next exercise",
+    // covered in completion-stats.spec.js.
+    await disableCompletionStats(page)
 
     const first = await page.locator('audio').elementHandle()
     const sentence = await sentenceOnScreen(page)

@@ -47,7 +47,7 @@ test.describe('Thai renders in a looped face', () => {
     const family = (locator) => locator.evaluate((el) => getComputedStyle(el).fontFamily)
 
     // The English chrome: the length hint, a control, the keyboard's legend.
-    expect(await family(page.getByText(/characters/))).not.toContain(LOOPED)
+    expect(await family(page.getByText(/symbols/))).not.toContain(LOOPED)
     expect(await family(page.getByRole('button', { name: 'Check' }))).not.toContain(LOOPED)
     expect(await family(page.getByText('little'))).not.toContain(LOOPED)
   })

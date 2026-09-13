@@ -10,9 +10,9 @@ import { useSettingsStore } from '../stores/settings'
 const store = useExerciseStore()
 const settings = useSettingsStore()
 
-// Spread rather than .length: the hint counts the characters a learner types,
+// Spread rather than .length: the hint counts the symbols a learner types,
 // and every Thai vowel and tone mark is one of them.
-const characterCount = computed(() =>
+const symbolCount = computed(() =>
   store.current ? [...store.current.sentence].length : 0,
 )
 </script>
@@ -43,10 +43,24 @@ const characterCount = computed(() =>
            to find the keys their fingers are supposed to be on. -->
       <div class="flex items-center gap-4">
         <p class="text-sm tracking-wide uppercase opacity-60">
-          {{ characterCount }} characters
+          {{ symbolCount }} symbols
         </p>
 
-        <AudioPlayer :key="store.current.id" :src="store.current.audioUrl" />
+        <!--
+          Keyed by the exercise id *and* whether the summary is showing for
+          it, not the id alone: the summary plays this same clip again (see
+          `CompletionStats.vue`'s own comment) rather than mounting a second
+          control, and this is what makes that happen — the key changing
+          from `id:false` to `id:true` on a correct check (with the setting
+          on) destroys and remounts the component, which retriggers its
+          autoplay-on-mount the same way a fresh exercise does. An incorrect
+          check, or a correct one with the setting off, leaves the key (and
+          the clip) alone.
+        -->
+        <AudioPlayer
+          :key="`${store.current.id}:${store.result === 'correct' && settings.showCompletionStats}`"
+          :src="store.current.audioUrl"
+        />
       </div>
 
       <AnswerInput />

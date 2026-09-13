@@ -140,3 +140,47 @@ describe('the on-screen keyboard visibility', () => {
     expect(store.virtualKeyboardEnabled).toBe(true)
   })
 })
+
+describe('the completion-stats setting', () => {
+  it('defaults to shown', async () => {
+    const store = await freshStore()
+    expect(store.showCompletionStats).toBe(true)
+  })
+
+  it('is read back by a fresh store instance', async () => {
+    const first = await freshStore()
+    first.showCompletionStats = false
+
+    const second = await freshStore()
+    expect(second.showCompletionStats).toBe(false)
+  })
+
+  it('does not crash store creation when storage throws on read', async () => {
+    window.localStorage.broken()
+
+    const store = await freshStore()
+    expect(store.showCompletionStats).toBe(true)
+  })
+
+  it('does not crash a setting change when storage throws on write', async () => {
+    const store = await freshStore()
+    window.localStorage.broken()
+
+    expect(() => {
+      store.showCompletionStats = false
+    }).not.toThrow()
+    expect(store.showCompletionStats).toBe(false)
+  })
+
+  it('is independent of the other two settings', async () => {
+    const store = await freshStore()
+
+    store.showCompletionStats = false
+    store.onScreenKeyboardVisible = false
+    store.virtualKeyboardOverride = 'on'
+
+    expect(store.showCompletionStats).toBe(false)
+    expect(store.onScreenKeyboardVisible).toBe(false)
+    expect(store.virtualKeyboardEnabled).toBe(true)
+  })
+})
