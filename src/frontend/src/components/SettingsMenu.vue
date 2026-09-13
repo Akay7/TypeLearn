@@ -8,13 +8,16 @@ const settings = useSettingsStore()
 const open = ref(false)
 const root = ref(null)
 
-// Two independent settings, one menu. Each is a `field` on the settings
-// store and a small set of named values — the same shape lets both render
-// through one radiogroup template below instead of two near-duplicates.
+// Three independent settings, one menu. The first two are each a `field` on
+// the settings store plus a small set of named values, and share one
+// radiogroup template below instead of two near-duplicates. The third is a
+// plain boolean, so it gets its own `kind: 'checkbox'` and a single-control
+// template instead of a two-option radiogroup — see design.md for why.
 const GROUPS = [
   {
     field: 'virtualKeyboardOverride',
     title: 'Virtual keyboard',
+    kind: 'radiogroup',
     // Device classification can only guess whether a phone-sized screen has
     // no physical keyboard and a larger one does — this is how the learner
     // corrects it in either direction. 'auto' stays a real, chosen option
@@ -29,6 +32,7 @@ const GROUPS = [
   {
     field: 'onScreenKeyboardVisible',
     title: 'On-screen keyboard',
+    kind: 'radiogroup',
     // For a learner who already has a physical keyboard and knows it: the
     // board is a lot of screen for something they are not reading off of.
     options: [
@@ -38,20 +42,23 @@ const GROUPS = [
   },
   {
     field: 'showCompletionStats',
-    title: 'Post-check summary',
-    // Labeled Enabled/Disabled rather than reusing Show/Hide (already the
-    // on-screen keyboard group's labels) or On/Off (already the virtual
-    // keyboard override group's) — every option in this menu needs an
-    // accessible name unique across the whole popover.
-    options: [
-      { value: true, label: 'Enabled', description: "Today's and the last 7 days' practice, plus a replay" },
-      { value: false, label: 'Disabled', description: 'Go straight to the next exercise' },
-    ],
+    kind: 'checkbox',
+    // A single on/off toggle needs one control and one accessible name, not
+    // a sibling pair of named options, so this carries its own label and
+    // description on the row itself rather than a separate caption heading
+    // above it like the radiogroup-based settings have.
+    label: 'Summary on complete',
+    description: 'Statistics for today and the last 7 days',
   },
 ]
 
 function choose(group, value) {
   settings[group.field] = value
+  open.value = false
+}
+
+function toggle(group) {
+  settings[group.field] = !settings[group.field]
   open.value = false
 }
 
@@ -116,46 +123,91 @@ onBeforeUnmount(() => {
       <div
         v-for="(group, index) in GROUPS"
         :key="group.field"
-        role="radiogroup"
-        :aria-label="group.title"
+        :role="group.kind === 'checkbox' ? undefined : 'radiogroup'"
+        :aria-label="group.kind === 'checkbox' ? undefined : group.title"
         :class="index > 0 ? 'mt-3 border-t border-black/10 pt-3 dark:border-white/10' : ''"
       >
-        <p class="mb-1.5 px-1.5 text-[11px] font-semibold tracking-wide text-black/50 uppercase dark:text-white/50">
-          {{ group.title }}
-        </p>
-
-        <button
-          v-for="option in group.options"
-          :key="String(option.value)"
-          type="button"
-          role="radio"
-          :aria-checked="settings[group.field] === option.value"
-          :aria-label="option.label"
-          :aria-describedby="`${group.field}-${option.value}`"
-          :class="[
-            'flex w-full items-center gap-2.5 rounded-lg px-1.5 py-2 text-left transition-colors',
-            settings[group.field] === option.value
-              ? 'bg-indigo-600/10'
-              : 'hover:bg-black/5 dark:hover:bg-white/5',
-          ]"
-          @click="choose(group, option.value)"
-        >
-          <span
+        <!-- A single boolean: one checkbox, labeled and described on the row
+             itself rather than under a separate caption heading — see
+             design.md. -->
+        <template v-if="group.kind === 'checkbox'">
+          <button
+            type="button"
+            role="checkbox"
+            :aria-checked="settings[group.field]"
+            :aria-label="group.label"
+            :aria-describedby="`${group.field}-description`"
             :class="[
-              'flex size-3.5 shrink-0 items-center justify-center rounded-full border',
-              settings[group.field] === option.value
-                ? 'border-indigo-600'
-                : 'border-black/30 dark:border-white/30',
+              'flex w-full items-center gap-2.5 rounded-lg px-1.5 py-2 text-left transition-colors',
+              settings[group.field] ? 'bg-indigo-600/10' : 'hover:bg-black/5 dark:hover:bg-white/5',
             ]"
+            @click="toggle(group)"
           >
-            <span v-if="settings[group.field] === option.value" class="size-1.5 rounded-full bg-indigo-600" />
-          </span>
+            <span
+              :class="[
+                'flex size-3.5 shrink-0 items-center justify-center rounded border',
+                settings[group.field] ? 'border-indigo-600 bg-indigo-600' : 'border-black/30 dark:border-white/30',
+              ]"
+            >
+              <svg
+                v-if="settings[group.field]"
+                class="size-2.5 text-white"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </span>
 
-          <span class="flex flex-col">
-            <span class="text-sm font-medium text-(--text-h)">{{ option.label }}</span>
-            <span :id="`${group.field}-${option.value}`" class="text-xs opacity-60">{{ option.description }}</span>
-          </span>
-        </button>
+            <span class="flex flex-col">
+              <span class="text-sm font-medium text-(--text-h)">{{ group.label }}</span>
+              <span :id="`${group.field}-description`" class="text-xs opacity-60">{{ group.description }}</span>
+            </span>
+          </button>
+        </template>
+
+        <template v-else>
+          <p class="mb-1.5 px-1.5 text-[11px] font-semibold tracking-wide text-black/50 uppercase dark:text-white/50">
+            {{ group.title }}
+          </p>
+
+          <button
+            v-for="option in group.options"
+            :key="String(option.value)"
+            type="button"
+            role="radio"
+            :aria-checked="settings[group.field] === option.value"
+            :aria-label="option.label"
+            :aria-describedby="`${group.field}-${option.value}`"
+            :class="[
+              'flex w-full items-center gap-2.5 rounded-lg px-1.5 py-2 text-left transition-colors',
+              settings[group.field] === option.value
+                ? 'bg-indigo-600/10'
+                : 'hover:bg-black/5 dark:hover:bg-white/5',
+            ]"
+            @click="choose(group, option.value)"
+          >
+            <span
+              :class="[
+                'flex size-3.5 shrink-0 items-center justify-center rounded-full border',
+                settings[group.field] === option.value
+                  ? 'border-indigo-600'
+                  : 'border-black/30 dark:border-white/30',
+              ]"
+            >
+              <span v-if="settings[group.field] === option.value" class="size-1.5 rounded-full bg-indigo-600" />
+            </span>
+
+            <span class="flex flex-col">
+              <span class="text-sm font-medium text-(--text-h)">{{ option.label }}</span>
+              <span :id="`${group.field}-${option.value}`" class="text-xs opacity-60">{{ option.description }}</span>
+            </span>
+          </button>
+        </template>
       </div>
     </div>
   </div>

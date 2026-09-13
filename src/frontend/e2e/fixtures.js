@@ -130,5 +130,5 @@ export async function clickThrough(page, text) {
  */
 export async function disableCompletionStats(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('radio', { name: 'Disabled' }).click()
+  await page.getByRole('checkbox', { name: 'Summary on complete' }).click()
 }
