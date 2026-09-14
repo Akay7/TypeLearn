@@ -77,5 +77,8 @@
     "today": "Aujourd'hui",
     "last7Days": "7 derniers jours",
     "next": "Exercice suivant →"
+  },
+  "footer": {
+    "source": "Code source sur GitHub"
   }
 }
