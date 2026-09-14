@@ -28,7 +28,7 @@ CNPG_CHART = "cnpg/cloudnative-pg"
 # cluster falls back to pulling `typelearn-backend` from Docker Hub — an
 # ImagePullBackOff that says nothing about the cause. So say it here instead.
 #
-# See the README for the exports each runtime needs.
+# See docs/development.md for the exports each runtime needs.
 _provider = os.getenv("KIND_EXPERIMENTAL_PROVIDER", "docker")
 _docker_host = os.getenv("DOCKER_HOST", "")
 _builder_is_podman = "podman" in _docker_host
@@ -38,12 +38,12 @@ if _provider == "podman" and not _builder_is_podman:
          "builds through " + (_docker_host if _docker_host else "the docker daemon") +
          ", so images would never reach the cluster. Either export DOCKER_HOST to " +
          "podman's socket, or unset KIND_EXPERIMENTAL_PROVIDER to use docker for both. " +
-         "See the README.")
+         "See docs/development.md.")
 
 if _provider != "podman" and _builder_is_podman:
     fail("Tilt builds through podman (DOCKER_HOST=" + _docker_host + ") but kind is " +
          "set to use " + _provider + ", so images would never reach the cluster. " +
-         "Export KIND_EXPERIMENTAL_PROVIDER=podman to match. See the README.")
+         "Export KIND_EXPERIMENTAL_PROVIDER=podman to match. See docs/development.md.")
 
 # --- The cluster this deploys into --------------------------------------------
 # Tilt refuses remote clusters on its own, but every kind cluster on this machine

@@ -7,7 +7,7 @@ import hu from './locales/hu.json'
 import ru from './locales/ru.json'
 import th from './locales/th.json'
 
-// The catalogs are plain JSON so Weblate (see "Translating" in the README) can
+// The catalogs are plain JSON so Weblate (see docs/translation.md) can
 // read and write them. en.json is the reference: it holds every key, and every
 // other locale is translated from it and falls back to it. Keys are nested
 // objects grouped by the component that owns the text, and components look
@@ -21,9 +21,9 @@ import th from './locales/th.json'
 // language and not the rest — and src/locales/__tests__/keys.test.js allows
 // that, since the missing strings fall back to English.
 
-// The six languages the interface is translated into. Keys here double as
-// SUPPORTED_LANGUAGES in stores/settings.js — that store owns the persisted
-// choice and its default, this module only owns the catalogs.
+// The languages the interface is translated into, in the order the language
+// control lists them. stores/settings.js imports this list to validate the
+// persisted choice and the browser default; this module only owns the catalogs.
 export const SUPPORTED_LANGUAGES = ['en', 'fr', 'de', 'th', 'ru', 'hu']
 
 // Weblate can write a string nobody has translated yet as "" instead of leaving

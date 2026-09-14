@@ -4,7 +4,7 @@
 # No dependencies on purpose: Calico, its Gateway API support, and the
 # CloudNativePG operator are cluster-scoped and shared by every release in a
 # cluster, so this chart states them as prerequisites and installs none of them.
-# See the README for what a cluster must already have.
+# See docs/deployment.md for what a cluster must already have.
 apiVersion: v2
 name: typelearn
 description: Thai typing practice — Django/Strawberry backend, Vue frontend, one origin
