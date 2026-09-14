@@ -44,6 +44,16 @@ it for you. Any text not translated yet shows in English.
 To change the English wording or add a language, see
 [docs/translation.md](docs/translation.md).
 
+## Audio
+
+The exercise clips and their sentences come from
+[Mozilla Common Voice](https://commonvoice.mozilla.org/)'s Thai dataset:
+sentences read aloud by volunteers and released into the public domain under
+CC0. The clips aren't stored in this repository; they are loaded from a local
+copy of the dataset (see [Running it locally](#running-it-locally)). You can
+record or check Thai sentences for the dataset at
+[commonvoice.mozilla.org/th](https://commonvoice.mozilla.org/th).
+
 ## License
 
 AGPL-3.0-or-later — see [LICENSE](LICENSE). Running a modified copy of this

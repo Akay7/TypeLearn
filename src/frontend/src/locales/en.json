@@ -76,5 +76,8 @@
     "today": "Today",
     "last7Days": "Last 7 days",
     "next": "Next exercise →"
+  },
+  "footer": {
+    "source": "Source code on GitHub"
   }
 }
