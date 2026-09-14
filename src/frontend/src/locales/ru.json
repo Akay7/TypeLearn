@@ -34,7 +34,7 @@
       "description": "Статистика за сегодня и последние 7 дней"
     },
     "language": {
-      "title": "Язык"
+      "title": "Языки"
     }
   },
   "sentence": {
@@ -43,8 +43,7 @@
     "empty": "Упражнения пока недоступны.",
     "symbolCount_one": "{count} символ",
     "symbolCount_few": "{count} символа",
-    "symbolCount_many": "{count} символов",
-    "symbolCount_other": "{count} символа"
+    "symbolCount_many": "{count} символов"
   },
   "answer": {
     "placeholder": "Напечатайте то, что слышите",
