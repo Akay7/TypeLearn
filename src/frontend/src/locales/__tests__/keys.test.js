@@ -1,18 +1,38 @@
 import { describe, expect, it } from 'vitest'
 
-import de from '../de.json'
-import en from '../en.json'
-import fr from '../fr.json'
-import hu from '../hu.json'
-import ru from '../ru.json'
-import th from '../th.json'
+import deCatalog from '../de.json'
+import enCatalog from '../en.json'
+import frCatalog from '../fr.json'
+import huCatalog from '../hu.json'
+import ruCatalog from '../ru.json'
+import thCatalog from '../th.json'
+
+// The catalogs are nested objects (see the comment in i18n.js); every check
+// below is about the dotted paths components look strings up by, so each
+// catalog is flattened to those paths first.
+function flatten(catalog, prefix = '') {
+  return Object.fromEntries(
+    Object.entries(catalog).flatMap(([key, value]) =>
+      value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? Object.entries(flatten(value, `${prefix}${key}.`))
+        : [[`${prefix}${key}`, value]],
+    ),
+  )
+}
+
+const CATALOGS = { en: enCatalog, fr: frCatalog, de: deCatalog, th: thCatalog, ru: ruCatalog, hu: huCatalog }
 
 // en.json is the reference catalog (see the comment in i18n.js). The other
 // locales are edited on Weblate, and a language is often only partly translated
 // there, so a key that is missing or blank passes: it falls back to English.
 // What does not pass is a translation that would break at runtime — a key en.json
 // no longer has, or a placeholder that does not match the English one.
-const OTHERS = { fr, de, th, ru, hu }
+const en = flatten(enCatalog)
+const OTHERS = Object.fromEntries(
+  Object.entries(CATALOGS)
+    .filter(([locale]) => locale !== 'en')
+    .map(([locale, catalog]) => [locale, flatten(catalog)]),
+)
 
 // Plural forms (see tPlural in i18n.js) vary by language: English has '_one'
 // and '_other', Russian adds '_few' and '_many'. Any CLDR form counts as
@@ -30,6 +50,14 @@ function placeholders(text) {
   return [...text.matchAll(/\{(\w+)\}/g)].map(([, name]) => name).sort()
 }
 
+/** Every key, at every level, that has a dot in it. */
+function dottedKeys(catalog, path = '') {
+  return Object.entries(catalog).flatMap(([key, value]) => [
+    ...(key.includes('.') ? [`${path}${key}`] : []),
+    ...(value !== null && typeof value === 'object' ? dottedKeys(value, `${path}${key} → `) : []),
+  ])
+}
+
 describe('locale catalogs', () => {
   it('en.json is a complete catalog of non-empty strings', () => {
     expect(Object.keys(en).length).toBeGreaterThan(0)
@@ -38,6 +66,14 @@ describe('locale catalogs', () => {
       expect(value, `en.json["${key}"]`).not.toBe('')
     }
   })
+
+  // A flat 'a.b' key would still resolve, but Weblate writes the keys it adds
+  // nested — so a catalog that mixed both shapes would not stay consistent.
+  for (const [locale, catalog] of Object.entries(CATALOGS)) {
+    it(`${locale}.json nests its keys instead of joining them with dots`, () => {
+      expect(dottedKeys(catalog)).toEqual([])
+    })
+  }
 
   for (const [locale, catalog] of Object.entries(OTHERS)) {
     it(`${locale}.json has no key that en.json lacks`, () => {

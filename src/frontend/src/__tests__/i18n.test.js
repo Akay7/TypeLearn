@@ -5,9 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // the '_one' form of a plural whose '_other' form is translated.
 vi.mock('../locales/fr.json', () => ({
   default: {
-    'answer.check': 'Vérifier',
-    'sentence.loading': '',
-    'sentence.symbolCount_other': '{count} caractères',
+    answer: { check: 'Vérifier' },
+    sentence: { loading: '', symbolCount_other: '{count} caractères' },
   },
 }))
 

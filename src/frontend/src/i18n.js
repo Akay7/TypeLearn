@@ -9,10 +9,13 @@ import th from './locales/th.json'
 
 // The catalogs are plain JSON so Weblate (see "Translating" in the README) can
 // read and write them. en.json is the reference: it holds every key, and every
-// other locale is translated from it and falls back to it. Keys are flat,
-// dot-prefixed strings grouped by the component that owns the text, rather than
-// nested objects: six files are easier to diff side by side this way, and
-// vue-i18n resolves a flat 'a.b' key exactly like a nested one.
+// other locale is translated from it and falls back to it. Keys are nested
+// objects grouped by the component that owns the text, and components look
+// them up by dotted path: t('settings.button.label'). Never a flat
+// 'settings.button.label' key: Weblate's i18next v4 format reads a dot as
+// nesting, so while it re-saves an existing flat key as it found it, any key
+// it adds to a translation is written nested — leaving a partly translated
+// file half one shape and half the other.
 //
 // A translation may be incomplete — a volunteer translates some strings of a
 // language and not the rest — and src/locales/__tests__/keys.test.js allows
@@ -24,10 +27,15 @@ import th from './locales/th.json'
 export const SUPPORTED_LANGUAGES = ['en', 'fr', 'de', 'th', 'ru', 'hu']
 
 // Weblate can write a string nobody has translated yet as "" instead of leaving
-// the key out, and vue-i18n renders "" as it is: a blank button. Dropping blanks
-// makes those keys fall back to English, the same as keys that are missing.
+// the key out, and vue-i18n renders "" as it is: a blank button. Dropping blanks,
+// at every level of nesting, makes those keys fall back to English, the same as
+// keys that are missing.
 function withoutBlanks(catalog) {
-  return Object.fromEntries(Object.entries(catalog).filter(([, text]) => text !== ''))
+  return Object.fromEntries(
+    Object.entries(catalog)
+      .filter(([, value]) => value !== '')
+      .map(([key, value]) => [key, typeof value === 'object' ? withoutBlanks(value) : value]),
+  )
 }
 
 export const i18n = createI18n({

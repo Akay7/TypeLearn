@@ -420,9 +420,14 @@ and `specs/roadmap.md` tracks milestone progress.
 
 ## Translating
 
-The interface text lives in `src/frontend/src/locales/`, one flat JSON file per
+The interface text lives in `src/frontend/src/locales/`, one JSON file per
 language. `en.json` is the source: every other language is translated from it,
 and any string a language has not translated yet shows in English.
+
+Keys are nested objects grouped by component (`settings` → `button` → `label`)
+and looked up by their dotted path, `t('settings.button.label')`. Don't write a
+flat `"settings.button.label"` key: Weblate writes the keys it adds nested, so a
+file would end up mixing both shapes. `keys.test.js` fails on dotted keys.
 
 Translations are done on [Hosted Weblate](https://hosted.weblate.org/). You don't
 need to open a pull request to translate. Weblate commits the changes and opens
@@ -430,7 +435,7 @@ the pull request for you. To change the English wording or add a string, edit
 `en.json` in a normal pull request. Weblate picks the change up once it merges.
 
 A string that depends on a number gets one key per plural form, named the i18next
-v4 way: `"sentence.symbolCount_one"` and `"sentence.symbolCount_other"` in
+v4 way: `symbolCount_one` and `symbolCount_other` inside `sentence` in
 `en.json`. Render it with `tPlural(key, count)` from `src/frontend/src/i18n.js`,
 not `t`. The helper picks the form the active language needs, so on Weblate each
 language gets its own plural forms, such as `_few` and `_many` for Russian.
@@ -443,15 +448,23 @@ Only maintainers need these, when creating or repairing the component:
 |---|---|
 | Version control system | GitHub pull request |
 | Source code repository | `https://github.com/Akay7/TypeLearn.git` |
-| Repository push URL | `git@github.com:Akay7/TypeLearn.git` |
+| Repository push URL | `git@github.com:Akay7/TypeLearn.git` (not empty, see below) |
 | Repository branch | `main` |
+| Push branch | `weblate` |
 | File mask | `src/frontend/src/locales/*.json` |
 | Monolingual base language file | `src/frontend/src/locales/en.json` |
 | Edit base file | off (English changes go through code review) |
-| File format | i18next JSON file v4 (keeps the flat keys; shows `key_one`, `key_few`, `key_other`… as one plural string) |
+| File format | i18next JSON file v4 (nested keys; shows `key_one`, `key_few`, `key_other`… as one plural string) |
 | File format parameters | `json_indent: 2`, `json_sort_keys` left unset (keeps `en.json`'s order) |
 | Translation flags | `vue-format` (checks `{placeholder}` names against the source) |
 | Adding new translation | Contact maintainers (see below) |
+
+Weblate pushes its commits to a `weblate` branch in this repository, not to a
+fork of it. CI pushes its images to ghcr.io before testing them, and a pull
+request opened from a fork gets a read-only token that cannot push, so CI would
+never test a translation. For the push to work, add Hosted Weblate's public SSH
+key (shown on its "SSH keys" page) to the repository as a deploy key with write
+access.
 
 ### Adding a language
 

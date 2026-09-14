@@ -1,46 +1,80 @@
 {
-  "settings.button.label": "Settings",
-  "settings.keyboardOverride.title": "Virtual keyboard",
-  "settings.keyboardOverride.auto.label": "Auto",
-  "settings.keyboardOverride.auto.description": "Match this device",
-  "settings.keyboardOverride.on.label": "On",
-  "settings.keyboardOverride.on.description": "Always show it",
-  "settings.keyboardOverride.off.label": "Off",
-  "settings.keyboardOverride.off.description": "Never show it",
-  "settings.onScreenKeyboard.title": "On-screen keyboard",
-  "settings.onScreenKeyboard.show.label": "Show",
-  "settings.onScreenKeyboard.show.description": "The Kedmanee board, with finger colours",
-  "settings.onScreenKeyboard.hide.label": "Hide",
-  "settings.onScreenKeyboard.hide.description": "Type on your own keyboard alone",
-  "settings.completionStats.label": "Summary on complete",
-  "settings.completionStats.description": "Statistics for today and the last 7 days",
-  "settings.language.title": "Language",
-  "sentence.loading": "Loading an exercise…",
-  "sentence.error": "Could not load an exercise. Is the backend running?",
-  "sentence.empty": "No exercises are available yet.",
-  "sentence.symbolCount_one": "{count} symbol",
-  "sentence.symbolCount_other": "{count} symbols",
-  "answer.placeholder": "Type what you hear",
-  "answer.check": "Check",
-  "answer.correct": "✓ Correct",
-  "answer.incorrect": "✗ Incorrect — try again",
-  "audio.play": "▶ Play",
-  "audio.pause": "⏸ Pause",
-  "audio.autoplayBlocked": "Press play to hear it",
-  "keyboard.finger.little": "little",
-  "keyboard.finger.ring": "ring",
-  "keyboard.finger.middle": "middle",
-  "keyboard.finger.leftIndex": "left index",
-  "keyboard.finger.rightIndex": "right index",
-  "keyboard.finger.thumb": "thumb",
-  "keyboard.restPosition": "rest position",
-  "keyboard.restPositionSuffix": ", rest position",
-  "keyboard.layoutSwitch": "Keyboard layout: {name} — switch",
-  "stats.caption": "Practice totals, today and over the last 7 days",
-  "stats.symbolsCorrect": "Symbols correct",
-  "stats.keysPressed": "Key presses",
-  "stats.exercisesCompleted": "Exercises completed",
-  "stats.today": "Today",
-  "stats.last7Days": "Last 7 days",
-  "stats.next": "Next exercise →"
+  "settings": {
+    "button": {
+      "label": "Settings"
+    },
+    "keyboardOverride": {
+      "title": "Virtual keyboard",
+      "auto": {
+        "label": "Auto",
+        "description": "Match this device"
+      },
+      "on": {
+        "label": "On",
+        "description": "Always show it"
+      },
+      "off": {
+        "label": "Off",
+        "description": "Never show it"
+      }
+    },
+    "onScreenKeyboard": {
+      "title": "On-screen keyboard",
+      "show": {
+        "label": "Show",
+        "description": "The Kedmanee board, with finger colours"
+      },
+      "hide": {
+        "label": "Hide",
+        "description": "Type on your own keyboard alone"
+      }
+    },
+    "completionStats": {
+      "label": "Summary on complete",
+      "description": "Statistics for today and the last 7 days"
+    },
+    "language": {
+      "title": "Language"
+    }
+  },
+  "sentence": {
+    "loading": "Loading an exercise…",
+    "error": "Could not load an exercise. Is the backend running?",
+    "empty": "No exercises are available yet.",
+    "symbolCount_one": "{count} symbol",
+    "symbolCount_other": "{count} symbols"
+  },
+  "answer": {
+    "placeholder": "Type what you hear",
+    "check": "Check",
+    "correct": "✓ Correct",
+    "incorrect": "✗ Incorrect — try again"
+  },
+  "audio": {
+    "play": "▶ Play",
+    "pause": "⏸ Pause",
+    "autoplayBlocked": "Press play to hear it"
+  },
+  "keyboard": {
+    "finger": {
+      "little": "little",
+      "ring": "ring",
+      "middle": "middle",
+      "leftIndex": "left index",
+      "rightIndex": "right index",
+      "thumb": "thumb"
+    },
+    "restPosition": "rest position",
+    "restPositionSuffix": ", rest position",
+    "layoutSwitch": "Keyboard layout: {name} — switch"
+  },
+  "stats": {
+    "caption": "Practice totals, today and over the last 7 days",
+    "symbolsCorrect": "Symbols correct",
+    "keysPressed": "Key presses",
+    "exercisesCompleted": "Exercises completed",
+    "today": "Today",
+    "last7Days": "Last 7 days",
+    "next": "Next exercise →"
+  }
 }
