@@ -2,10 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { useIsPhone } from '../lib/device'
+import { i18n, SUPPORTED_LANGUAGES } from '../i18n'
 
 const OVERRIDE_KEY = 'typelearn.virtualKeyboardOverride'
 const KEYBOARD_KEY = 'typelearn.onScreenKeyboardVisible'
 const COMPLETION_STATS_KEY = 'typelearn.showCompletionStats'
+const LANGUAGE_KEY = 'typelearn.interfaceLanguage'
 
 // 'auto' follows the device classification; 'on'/'off' force the virtual
 // keyboard either way, for the cases classification gets wrong in either
@@ -73,6 +75,43 @@ function saveCompletionStatsVisible(value) {
   }
 }
 
+/** The base subtag of a BCP-47 tag ('fr-CA' -> 'fr'), lowercased — none of
+ * the six catalogs are regional variants, so a region suffix is dropped
+ * rather than treated as a mismatch. */
+function baseSubtag(tag) {
+  return tag.split('-')[0].toLowerCase()
+}
+
+/** The browser's own language, if one of the six this app carries a
+ * catalog for; `'en'` otherwise, including when the browser reports
+ * nothing at all (no `navigator`, or a language-less environment). */
+function browserLanguage() {
+  const tag = typeof navigator === 'undefined' ? undefined : navigator.language
+  if (!tag) return 'en'
+  const base = baseSubtag(tag)
+  return SUPPORTED_LANGUAGES.includes(base) ? base : 'en'
+}
+
+/** The persisted interface language, or the browser's own (via
+ * `browserLanguage`) when nothing has been stored yet or what is stored is
+ * not one of the six supported languages. */
+function loadLanguage() {
+  try {
+    const stored = window.localStorage.getItem(LANGUAGE_KEY)
+    return SUPPORTED_LANGUAGES.includes(stored) ? stored : browserLanguage()
+  } catch {
+    return browserLanguage()
+  }
+}
+
+function saveLanguage(value) {
+  try {
+    window.localStorage.setItem(LANGUAGE_KEY, value)
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   const virtualKeyboardOverride = ref(loadOverride())
   const isPhone = useIsPhone()
@@ -87,12 +126,27 @@ export const useSettingsStore = defineStore('settings', () => {
   // post-check summary (and waits for the learner) or behaves as it always
   // has (verdict, then straight to the next exercise).
   const showCompletionStats = ref(loadCompletionStatsVisible())
+  const interfaceLanguage = ref(loadLanguage())
 
   // Synchronous, not batched: the choice should survive a tab closed right
   // after it's made, not wait for a tick that might not come.
   watch(virtualKeyboardOverride, saveOverride, { flush: 'sync' })
   watch(onScreenKeyboardVisible, saveKeyboardVisible, { flush: 'sync' })
   watch(showCompletionStats, saveCompletionStatsVisible, { flush: 'sync' })
+  watch(interfaceLanguage, saveLanguage, { flush: 'sync' })
+
+  // The one place `interfaceLanguage` drives what the rest of the app reads:
+  // every component keeps reading this store for every setting, rather than
+  // half of them importing vue-i18n's own locale ref directly. `immediate`
+  // applies the stored or browser-derived default before anything renders,
+  // so there is no flash of the wrong language while the app boots.
+  watch(
+    interfaceLanguage,
+    (value) => {
+      i18n.global.locale.value = value
+    },
+    { flush: 'sync', immediate: true },
+  )
 
   // What AnswerInput.vue actually needs: one boolean, the override applied
   // over the device default.
@@ -107,5 +161,6 @@ export const useSettingsStore = defineStore('settings', () => {
     virtualKeyboardEnabled,
     onScreenKeyboardVisible,
     showCompletionStats,
+    interfaceLanguage,
   }
 })

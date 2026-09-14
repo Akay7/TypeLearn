@@ -418,6 +418,54 @@ is built.
 Planning runs through [OpenSpec](openspec/): `openspec list` shows active changes,
 and `specs/roadmap.md` tracks milestone progress.
 
+## Translating
+
+The interface text lives in `src/frontend/src/locales/`, one flat JSON file per
+language. `en.json` is the source: every other language is translated from it,
+and any string a language has not translated yet shows in English.
+
+Translations are done on [Hosted Weblate](https://hosted.weblate.org/). You don't
+need to open a pull request to translate. Weblate commits the changes and opens
+the pull request for you. To change the English wording or add a string, edit
+`en.json` in a normal pull request. Weblate picks the change up once it merges.
+
+A string that depends on a number gets one key per plural form, named the i18next
+v4 way: `"sentence.symbolCount_one"` and `"sentence.symbolCount_other"` in
+`en.json`. Render it with `tPlural(key, count)` from `src/frontend/src/i18n.js`,
+not `t`. The helper picks the form the active language needs, so on Weblate each
+language gets its own plural forms, such as `_few` and `_many` for Russian.
+
+### Weblate component settings
+
+Only maintainers need these, when creating or repairing the component:
+
+| Setting | Value |
+|---|---|
+| Version control system | GitHub pull request |
+| Source code repository | `https://github.com/Akay7/TypeLearn.git` |
+| Repository push URL | `git@github.com:Akay7/TypeLearn.git` |
+| Repository branch | `main` |
+| File mask | `src/frontend/src/locales/*.json` |
+| Monolingual base language file | `src/frontend/src/locales/en.json` |
+| Edit base file | off (English changes go through code review) |
+| File format | i18next JSON file v4 (keeps the flat keys; shows `key_one`, `key_few`, `key_other`… as one plural string) |
+| File format parameters | `json_indent: 2`, `json_sort_keys` left unset (keeps `en.json`'s order) |
+| Translation flags | `vue-format` (checks `{placeholder}` names against the source) |
+| Adding new translation | Contact maintainers (see below) |
+
+### Adding a language
+
+A new JSON file alone does nothing. The app only loads the languages it lists. To
+add one, open a pull request that:
+
+1. adds an empty `src/frontend/src/locales/<code>.json` (`{}`), and imports it in
+   `src/frontend/src/i18n.js`,
+2. adds the code to `SUPPORTED_LANGUAGES` in `i18n.js` and `stores/settings.js`,
+3. adds the language's own name for itself (e.g. "Deutsch") to the Language
+   control in `components/SettingsMenu.vue`.
+
+Once it merges, Weblate lists the language for translators.
+
 ## License
 
 AGPL-3.0-or-later — see [LICENSE](LICENSE). Running a modified copy of this

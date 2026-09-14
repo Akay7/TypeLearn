@@ -1,14 +1,17 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import AnswerInput from './AnswerInput.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import OnScreenKeyboard from './OnScreenKeyboard.vue'
+import { tPlural } from '../i18n'
 import { useExerciseStore } from '../stores/exercise'
 import { useSettingsStore } from '../stores/settings'
 
 const store = useExerciseStore()
 const settings = useSettingsStore()
+const { t } = useI18n()
 
 // Spread rather than .length: the hint counts the symbols a learner types,
 // and every Thai vowel and tone mark is one of them.
@@ -20,15 +23,15 @@ const symbolCount = computed(() =>
 <template>
   <section class="flex w-full flex-col items-center gap-3 text-center">
     <p v-if="store.status === 'loading'" class="text-lg opacity-60">
-      Loading an exercise…
+      {{ t('sentence.loading') }}
     </p>
 
     <p v-else-if="store.status === 'error'" class="text-lg text-red-500">
-      Could not load an exercise. Is the backend running?
+      {{ t('sentence.error') }}
     </p>
 
     <p v-else-if="store.status === 'empty'" class="text-lg opacity-60">
-      No exercises are available yet.
+      {{ t('sentence.empty') }}
     </p>
 
     <template v-else>
@@ -43,7 +46,7 @@ const symbolCount = computed(() =>
            to find the keys their fingers are supposed to be on. -->
       <div class="flex items-center gap-4">
         <p class="text-sm tracking-wide uppercase opacity-60">
-          {{ symbolCount }} symbols
+          {{ tPlural('sentence.symbolCount', symbolCount) }}
         </p>
 
         <!--

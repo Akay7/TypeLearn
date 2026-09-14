@@ -1,9 +1,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { FINGER_NAMES, keyboardModel, layoutsAvailable, reach } from '../lib/keyboard'
 import { hasDiverged, nextExpected } from '../lib/checking'
 import { useExerciseStore } from '../stores/exercise'
+
+const { t } = useI18n()
 
 // The keyboard renders the layout it is handed and knows nothing about which
 // one it is: how many layers it has, which modifiers reach them, what the keys
@@ -116,21 +119,27 @@ const FINGER_TINT = {
 // One entry per finger, except the mirrored trio (pinky/ring/middle) which
 // still cover both hands with one swatch each. The index fingers get one
 // entry per hand, since they are the pair this keyboard tells apart by colour.
-const LEGEND = [
-  { finger: 'l-pinky', name: 'little', swatch: 'bg-rose-500/40' },
-  { finger: 'l-ring', name: 'ring', swatch: 'bg-amber-500/40' },
-  { finger: 'l-middle', name: 'middle', swatch: 'bg-emerald-500/40' },
-  { finger: 'l-index', name: 'left index', swatch: 'bg-sky-500/40' },
-  { finger: 'r-index', name: 'right index', swatch: 'bg-blue-600/40' },
-  { finger: 'thumb', name: 'thumb', swatch: 'bg-violet-500/40' },
-]
+// A computed, not a plain constant: `t(...)` reads the active locale
+// reactively, but an array built from it once at module load would not.
+const LEGEND = computed(() => [
+  { finger: 'l-pinky', name: t('keyboard.finger.little'), swatch: 'bg-rose-500/40' },
+  { finger: 'l-ring', name: t('keyboard.finger.ring'), swatch: 'bg-amber-500/40' },
+  { finger: 'l-middle', name: t('keyboard.finger.middle'), swatch: 'bg-emerald-500/40' },
+  { finger: 'l-index', name: t('keyboard.finger.leftIndex'), swatch: 'bg-sky-500/40' },
+  { finger: 'r-index', name: t('keyboard.finger.rightIndex'), swatch: 'bg-blue-600/40' },
+  { finger: 'thumb', name: t('keyboard.finger.thumb'), swatch: 'bg-violet-500/40' },
+])
 
 const tint = (finger) => FINGER_TINT[finger] ?? ''
+// `FINGER_NAMES` (board.js) stays in English: it is the keyboard's own
+// domain model, shared with the layout/finger logic and its tests, not a
+// piece of interface chrome — the interface language governs the legend
+// above and the on-screen text below, not this per-key tooltip.
 const fingerName = (finger) => FINGER_NAMES[finger] ?? ''
 
 // Read out alongside the finger name, so the marker means the same thing to a
 // screen reader that it does visually.
-const homeSuffix = (cell) => (cell.home ? ', rest position' : '')
+const homeSuffix = (cell) => (cell.home ? t('keyboard.restPositionSuffix') : '')
 
 // Now that the key backgrounds carry finger colour, an indigo highlight would
 // be one more hue competing with them. Maximum contrast against every tint,
@@ -277,7 +286,7 @@ const SWITCH_WIDTH = 'w-14'
           'shrink-0 rounded-md border border-black/15 bg-white px-2 py-1 text-xs font-medium text-black',
           'transition-colors hover:bg-black/5 dark:border-white/25',
         ]"
-        :aria-label="`Keyboard layout: ${shown.name} — switch`"
+        :aria-label="t('keyboard.layoutSwitch', { name: shown.name })"
         @mousedown.prevent
         @click="switchLayout()"
       >
@@ -300,7 +309,7 @@ const SWITCH_WIDTH = 'w-14'
           <span class="relative size-3 rounded-sm bg-black/10 dark:bg-white/10">
             <span :class="HOME_MARKER_CLASSES" />
           </span>
-          rest position
+          {{ t('keyboard.restPosition') }}
         </li>
       </ul>
 

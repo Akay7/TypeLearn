@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import CompletionStats from './CompletionStats.vue'
 import { useExerciseStore } from '../stores/exercise'
@@ -7,6 +8,7 @@ import { useSettingsStore } from '../stores/settings'
 
 const store = useExerciseStore()
 const settings = useSettingsStore()
+const { t } = useI18n()
 
 const field = ref(null)
 
@@ -67,7 +69,7 @@ const showingSummary = computed(() => store.result === 'correct' && settings.sho
           autocapitalize="off"
           spellcheck="false"
           :inputmode="settings.virtualKeyboardEnabled ? 'text' : 'none'"
-          placeholder="Type what you hear"
+          :placeholder="t('answer.placeholder')"
           class="w-full rounded-lg border border-black/20 bg-black/5 p-3 text-2xl outline-none focus:border-indigo-500 dark:border-white/20 dark:bg-white/5"
           @keyup.enter="store.check()"
         />
@@ -85,7 +87,7 @@ const showingSummary = computed(() => store.result === 'correct' && settings.sho
           class="w-44 shrink-0 rounded-full bg-indigo-600 px-6 py-3 text-base font-medium whitespace-nowrap text-white transition hover:bg-indigo-500"
           @click="store.check()"
         >
-          Check
+          {{ t('answer.check') }}
         </button>
       </div>
 
@@ -96,11 +98,11 @@ const showingSummary = computed(() => store.result === 'correct' && settings.sho
            here — SentenceView has been showing it at text-5xl the whole time. -->
       <div class="flex h-8 items-center" aria-live="polite">
         <p v-if="store.result === 'correct'" class="text-lg font-semibold text-green-600 dark:text-green-400">
-          ✓ Correct
+          {{ t('answer.correct') }}
         </p>
 
         <p v-else-if="store.result === 'incorrect'" class="text-lg font-semibold text-red-600 dark:text-red-400">
-          ✗ Incorrect — try again
+          {{ t('answer.incorrect') }}
         </p>
       </div>
     </div>
