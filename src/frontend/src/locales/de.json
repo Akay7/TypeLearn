@@ -1,46 +1,80 @@
 {
-  "settings.button.label": "Einstellungen",
-  "settings.keyboardOverride.title": "Virtuelle Tastatur",
-  "settings.keyboardOverride.auto.label": "Automatisch",
-  "settings.keyboardOverride.auto.description": "An dieses Gerät anpassen",
-  "settings.keyboardOverride.on.label": "Ein",
-  "settings.keyboardOverride.on.description": "Immer anzeigen",
-  "settings.keyboardOverride.off.label": "Aus",
-  "settings.keyboardOverride.off.description": "Nie anzeigen",
-  "settings.onScreenKeyboard.title": "Bildschirmtastatur",
-  "settings.onScreenKeyboard.show.label": "Anzeigen",
-  "settings.onScreenKeyboard.show.description": "Das Kedmanee-Layout, mit Fingerfarben",
-  "settings.onScreenKeyboard.hide.label": "Ausblenden",
-  "settings.onScreenKeyboard.hide.description": "Nur mit der eigenen Tastatur tippen",
-  "settings.completionStats.label": "Zusammenfassung am Ende",
-  "settings.completionStats.description": "Statistik für heute und die letzten 7 Tage",
-  "settings.language.title": "Sprache",
-  "sentence.loading": "Übung wird geladen…",
-  "sentence.error": "Übung konnte nicht geladen werden. Läuft das Backend?",
-  "sentence.empty": "Es sind noch keine Übungen verfügbar.",
-  "sentence.symbolCount_one": "{count} Zeichen",
-  "sentence.symbolCount_other": "{count} Zeichen",
-  "answer.placeholder": "Tippe, was du hörst",
-  "answer.check": "Prüfen",
-  "answer.correct": "✓ Richtig",
-  "answer.incorrect": "✗ Falsch — versuch es erneut",
-  "audio.play": "▶ Abspielen",
-  "audio.pause": "⏸ Pause",
-  "audio.autoplayBlocked": "Drücke Abspielen, um es zu hören",
-  "keyboard.finger.little": "kleiner Finger",
-  "keyboard.finger.ring": "Ringfinger",
-  "keyboard.finger.middle": "Mittelfinger",
-  "keyboard.finger.leftIndex": "linker Zeigefinger",
-  "keyboard.finger.rightIndex": "rechter Zeigefinger",
-  "keyboard.finger.thumb": "Daumen",
-  "keyboard.restPosition": "Ruheposition",
-  "keyboard.restPositionSuffix": ", Ruheposition",
-  "keyboard.layoutSwitch": "Tastaturlayout: {name} — wechseln",
-  "stats.caption": "Übungssummen, heute und in den letzten 7 Tagen",
-  "stats.symbolsCorrect": "Richtige Zeichen",
-  "stats.keysPressed": "Tastendrücke",
-  "stats.exercisesCompleted": "Erledigte Übungen",
-  "stats.today": "Heute",
-  "stats.last7Days": "Letzte 7 Tage",
-  "stats.next": "Nächste Übung →"
+  "settings": {
+    "button": {
+      "label": "Einstellungen"
+    },
+    "keyboardOverride": {
+      "title": "Virtuelle Tastatur",
+      "auto": {
+        "label": "Automatisch",
+        "description": "An dieses Gerät anpassen"
+      },
+      "on": {
+        "label": "Ein",
+        "description": "Immer anzeigen"
+      },
+      "off": {
+        "label": "Aus",
+        "description": "Nie anzeigen"
+      }
+    },
+    "onScreenKeyboard": {
+      "title": "Bildschirmtastatur",
+      "show": {
+        "label": "Anzeigen",
+        "description": "Das Kedmanee-Layout, mit Fingerfarben"
+      },
+      "hide": {
+        "label": "Ausblenden",
+        "description": "Nur mit der eigenen Tastatur tippen"
+      }
+    },
+    "completionStats": {
+      "label": "Zusammenfassung am Ende",
+      "description": "Statistik für heute und die letzten 7 Tage"
+    },
+    "language": {
+      "title": "Sprache"
+    }
+  },
+  "sentence": {
+    "loading": "Übung wird geladen…",
+    "error": "Übung konnte nicht geladen werden. Läuft das Backend?",
+    "empty": "Es sind noch keine Übungen verfügbar.",
+    "symbolCount_one": "{count} Zeichen",
+    "symbolCount_other": "{count} Zeichen"
+  },
+  "answer": {
+    "placeholder": "Tippe, was du hörst",
+    "check": "Prüfen",
+    "correct": "✓ Richtig",
+    "incorrect": "✗ Falsch — versuch es erneut"
+  },
+  "audio": {
+    "play": "▶ Abspielen",
+    "pause": "⏸ Pause",
+    "autoplayBlocked": "Drücke Abspielen, um es zu hören"
+  },
+  "keyboard": {
+    "finger": {
+      "little": "kleiner Finger",
+      "ring": "Ringfinger",
+      "middle": "Mittelfinger",
+      "leftIndex": "linker Zeigefinger",
+      "rightIndex": "rechter Zeigefinger",
+      "thumb": "Daumen"
+    },
+    "restPosition": "Ruheposition",
+    "restPositionSuffix": ", Ruheposition",
+    "layoutSwitch": "Tastaturlayout: {name} — wechseln"
+  },
+  "stats": {
+    "caption": "Übungssummen, heute und in den letzten 7 Tagen",
+    "symbolsCorrect": "Richtige Zeichen",
+    "keysPressed": "Tastendrücke",
+    "exercisesCompleted": "Erledigte Übungen",
+    "today": "Heute",
+    "last7Days": "Letzte 7 Tage",
+    "next": "Nächste Übung →"
+  }
 }

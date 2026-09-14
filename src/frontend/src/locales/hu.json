@@ -1,46 +1,80 @@
 {
-  "settings.button.label": "Beállítások",
-  "settings.keyboardOverride.title": "Virtuális billentyűzet",
-  "settings.keyboardOverride.auto.label": "Automatikus",
-  "settings.keyboardOverride.auto.description": "Az eszköz alapján",
-  "settings.keyboardOverride.on.label": "Be",
-  "settings.keyboardOverride.on.description": "Mindig jelenjen meg",
-  "settings.keyboardOverride.off.label": "Ki",
-  "settings.keyboardOverride.off.description": "Soha ne jelenjen meg",
-  "settings.onScreenKeyboard.title": "Képernyő-billentyűzet",
-  "settings.onScreenKeyboard.show.label": "Megjelenítés",
-  "settings.onScreenKeyboard.show.description": "A Kedmanee kiosztás, ujjszínekkel",
-  "settings.onScreenKeyboard.hide.label": "Elrejtés",
-  "settings.onScreenKeyboard.hide.description": "Csak a saját billentyűzeteden gépelj",
-  "settings.completionStats.label": "Összegzés a végén",
-  "settings.completionStats.description": "Statisztika a mai napról és az elmúlt 7 napról",
-  "settings.language.title": "Nyelv",
-  "sentence.loading": "Feladat betöltése…",
-  "sentence.error": "A feladatot nem sikerült betölteni. Fut a háttérszolgáltatás?",
-  "sentence.empty": "Még nincs elérhető feladat.",
-  "sentence.symbolCount_one": "{count} karakter",
-  "sentence.symbolCount_other": "{count} karakter",
-  "answer.placeholder": "Írd le, amit hallasz",
-  "answer.check": "Ellenőrzés",
-  "answer.correct": "✓ Helyes",
-  "answer.incorrect": "✗ Helytelen — próbáld újra",
-  "audio.play": "▶ Lejátszás",
-  "audio.pause": "⏸ Szünet",
-  "audio.autoplayBlocked": "Nyomd meg a lejátszást a meghallgatáshoz",
-  "keyboard.finger.little": "kisujj",
-  "keyboard.finger.ring": "gyűrűsujj",
-  "keyboard.finger.middle": "középső ujj",
-  "keyboard.finger.leftIndex": "bal mutatóujj",
-  "keyboard.finger.rightIndex": "jobb mutatóujj",
-  "keyboard.finger.thumb": "hüvelykujj",
-  "keyboard.restPosition": "nyugalmi helyzet",
-  "keyboard.restPositionSuffix": ", nyugalmi helyzet",
-  "keyboard.layoutSwitch": "Billentyűzetkiosztás: {name} — váltás",
-  "stats.caption": "Gyakorlási összesítés, ma és az elmúlt 7 napban",
-  "stats.symbolsCorrect": "Helyes karakterek",
-  "stats.keysPressed": "Billentyűleütések",
-  "stats.exercisesCompleted": "Befejezett gyakorlatok",
-  "stats.today": "Ma",
-  "stats.last7Days": "Elmúlt 7 nap",
-  "stats.next": "Következő gyakorlat →"
+  "settings": {
+    "button": {
+      "label": "Beállítások"
+    },
+    "keyboardOverride": {
+      "title": "Virtuális billentyűzet",
+      "auto": {
+        "label": "Automatikus",
+        "description": "Az eszköz alapján"
+      },
+      "on": {
+        "label": "Be",
+        "description": "Mindig jelenjen meg"
+      },
+      "off": {
+        "label": "Ki",
+        "description": "Soha ne jelenjen meg"
+      }
+    },
+    "onScreenKeyboard": {
+      "title": "Képernyő-billentyűzet",
+      "show": {
+        "label": "Megjelenítés",
+        "description": "A Kedmanee kiosztás, ujjszínekkel"
+      },
+      "hide": {
+        "label": "Elrejtés",
+        "description": "Csak a saját billentyűzeteden gépelj"
+      }
+    },
+    "completionStats": {
+      "label": "Összegzés a végén",
+      "description": "Statisztika a mai napról és az elmúlt 7 napról"
+    },
+    "language": {
+      "title": "Nyelv"
+    }
+  },
+  "sentence": {
+    "loading": "Feladat betöltése…",
+    "error": "A feladatot nem sikerült betölteni. Fut a háttérszolgáltatás?",
+    "empty": "Még nincs elérhető feladat.",
+    "symbolCount_one": "{count} karakter",
+    "symbolCount_other": "{count} karakter"
+  },
+  "answer": {
+    "placeholder": "Írd le, amit hallasz",
+    "check": "Ellenőrzés",
+    "correct": "✓ Helyes",
+    "incorrect": "✗ Helytelen — próbáld újra"
+  },
+  "audio": {
+    "play": "▶ Lejátszás",
+    "pause": "⏸ Szünet",
+    "autoplayBlocked": "Nyomd meg a lejátszást a meghallgatáshoz"
+  },
+  "keyboard": {
+    "finger": {
+      "little": "kisujj",
+      "ring": "gyűrűsujj",
+      "middle": "középső ujj",
+      "leftIndex": "bal mutatóujj",
+      "rightIndex": "jobb mutatóujj",
+      "thumb": "hüvelykujj"
+    },
+    "restPosition": "nyugalmi helyzet",
+    "restPositionSuffix": ", nyugalmi helyzet",
+    "layoutSwitch": "Billentyűzetkiosztás: {name} — váltás"
+  },
+  "stats": {
+    "caption": "Gyakorlási összesítés, ma és az elmúlt 7 napban",
+    "symbolsCorrect": "Helyes karakterek",
+    "keysPressed": "Billentyűleütések",
+    "exercisesCompleted": "Befejezett gyakorlatok",
+    "today": "Ma",
+    "last7Days": "Elmúlt 7 nap",
+    "next": "Következő gyakorlat →"
+  }
 }

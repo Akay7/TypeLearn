@@ -1,45 +1,79 @@
 {
-  "settings.button.label": "การตั้งค่า",
-  "settings.keyboardOverride.title": "แป้นพิมพ์เสมือน",
-  "settings.keyboardOverride.auto.label": "อัตโนมัติ",
-  "settings.keyboardOverride.auto.description": "ให้ตรงกับอุปกรณ์นี้",
-  "settings.keyboardOverride.on.label": "เปิด",
-  "settings.keyboardOverride.on.description": "แสดงเสมอ",
-  "settings.keyboardOverride.off.label": "ปิด",
-  "settings.keyboardOverride.off.description": "ไม่แสดงเลย",
-  "settings.onScreenKeyboard.title": "แป้นพิมพ์บนหน้าจอ",
-  "settings.onScreenKeyboard.show.label": "แสดง",
-  "settings.onScreenKeyboard.show.description": "แป้นพิมพ์เกษมณี พร้อมสีประจำนิ้ว",
-  "settings.onScreenKeyboard.hide.label": "ซ่อน",
-  "settings.onScreenKeyboard.hide.description": "พิมพ์ด้วยแป้นพิมพ์ของคุณเองเท่านั้น",
-  "settings.completionStats.label": "สรุปเมื่อทำเสร็จ",
-  "settings.completionStats.description": "สถิติของวันนี้และ 7 วันที่ผ่านมา",
-  "settings.language.title": "ภาษา",
-  "sentence.loading": "กำลังโหลดแบบฝึกหัด…",
-  "sentence.error": "ไม่สามารถโหลดแบบฝึกหัดได้ เซิร์ฟเวอร์แบ็กเอนด์ทำงานอยู่หรือไม่",
-  "sentence.empty": "ยังไม่มีแบบฝึกหัดให้ใช้งาน",
-  "sentence.symbolCount_other": "{count} ตัวอักษร",
-  "answer.placeholder": "พิมพ์ตามที่คุณได้ยิน",
-  "answer.check": "ตรวจสอบ",
-  "answer.correct": "✓ ถูกต้อง",
-  "answer.incorrect": "✗ ไม่ถูกต้อง — ลองอีกครั้ง",
-  "audio.play": "▶ เล่น",
-  "audio.pause": "⏸ หยุดชั่วคราว",
-  "audio.autoplayBlocked": "กดเล่นเพื่อฟัง",
-  "keyboard.finger.little": "นิ้วก้อย",
-  "keyboard.finger.ring": "นิ้วนาง",
-  "keyboard.finger.middle": "นิ้วกลาง",
-  "keyboard.finger.leftIndex": "นิ้วชี้ซ้าย",
-  "keyboard.finger.rightIndex": "นิ้วชี้ขวา",
-  "keyboard.finger.thumb": "นิ้วโป้ง",
-  "keyboard.restPosition": "ตำแหน่งพัก",
-  "keyboard.restPositionSuffix": ", ตำแหน่งพัก",
-  "keyboard.layoutSwitch": "รูปแบบแป้นพิมพ์: {name} — สลับ",
-  "stats.caption": "ยอดรวมการฝึก วันนี้และใน 7 วันที่ผ่านมา",
-  "stats.symbolsCorrect": "ตัวอักษรที่ถูกต้อง",
-  "stats.keysPressed": "จำนวนการกดแป้น",
-  "stats.exercisesCompleted": "แบบฝึกหัดที่ทำเสร็จ",
-  "stats.today": "วันนี้",
-  "stats.last7Days": "7 วันที่ผ่านมา",
-  "stats.next": "แบบฝึกหัดถัดไป →"
+  "settings": {
+    "button": {
+      "label": "การตั้งค่า"
+    },
+    "keyboardOverride": {
+      "title": "แป้นพิมพ์เสมือน",
+      "auto": {
+        "label": "อัตโนมัติ",
+        "description": "ให้ตรงกับอุปกรณ์นี้"
+      },
+      "on": {
+        "label": "เปิด",
+        "description": "แสดงเสมอ"
+      },
+      "off": {
+        "label": "ปิด",
+        "description": "ไม่แสดงเลย"
+      }
+    },
+    "onScreenKeyboard": {
+      "title": "แป้นพิมพ์บนหน้าจอ",
+      "show": {
+        "label": "แสดง",
+        "description": "แป้นพิมพ์เกษมณี พร้อมสีประจำนิ้ว"
+      },
+      "hide": {
+        "label": "ซ่อน",
+        "description": "พิมพ์ด้วยแป้นพิมพ์ของคุณเองเท่านั้น"
+      }
+    },
+    "completionStats": {
+      "label": "สรุปเมื่อทำเสร็จ",
+      "description": "สถิติของวันนี้และ 7 วันที่ผ่านมา"
+    },
+    "language": {
+      "title": "ภาษา"
+    }
+  },
+  "sentence": {
+    "loading": "กำลังโหลดแบบฝึกหัด…",
+    "error": "ไม่สามารถโหลดแบบฝึกหัดได้ เซิร์ฟเวอร์แบ็กเอนด์ทำงานอยู่หรือไม่",
+    "empty": "ยังไม่มีแบบฝึกหัดให้ใช้งาน",
+    "symbolCount_other": "{count} ตัวอักษร"
+  },
+  "answer": {
+    "placeholder": "พิมพ์ตามที่คุณได้ยิน",
+    "check": "ตรวจสอบ",
+    "correct": "✓ ถูกต้อง",
+    "incorrect": "✗ ไม่ถูกต้อง — ลองอีกครั้ง"
+  },
+  "audio": {
+    "play": "▶ เล่น",
+    "pause": "⏸ หยุดชั่วคราว",
+    "autoplayBlocked": "กดเล่นเพื่อฟัง"
+  },
+  "keyboard": {
+    "finger": {
+      "little": "นิ้วก้อย",
+      "ring": "นิ้วนาง",
+      "middle": "นิ้วกลาง",
+      "leftIndex": "นิ้วชี้ซ้าย",
+      "rightIndex": "นิ้วชี้ขวา",
+      "thumb": "นิ้วโป้ง"
+    },
+    "restPosition": "ตำแหน่งพัก",
+    "restPositionSuffix": ", ตำแหน่งพัก",
+    "layoutSwitch": "รูปแบบแป้นพิมพ์: {name} — สลับ"
+  },
+  "stats": {
+    "caption": "ยอดรวมการฝึก วันนี้และใน 7 วันที่ผ่านมา",
+    "symbolsCorrect": "ตัวอักษรที่ถูกต้อง",
+    "keysPressed": "จำนวนการกดแป้น",
+    "exercisesCompleted": "แบบฝึกหัดที่ทำเสร็จ",
+    "today": "วันนี้",
+    "last7Days": "7 วันที่ผ่านมา",
+    "next": "แบบฝึกหัดถัดไป →"
+  }
 }
