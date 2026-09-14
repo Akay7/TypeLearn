@@ -1,7 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { i18n } from '../../i18n'
 import { useSettingsStore } from '../settings'
 
 // The device classification is mocked out here: this suite is about the
@@ -39,6 +40,11 @@ beforeEach(() => {
   isPhone.value = false
   globalThis.window = globalThis.window ?? {}
   window.localStorage = fakeStorage()
+  vi.stubGlobal('navigator', { language: 'en-US' })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('the virtual keyboard override', () => {
@@ -182,5 +188,77 @@ describe('the completion-stats setting', () => {
     expect(store.showCompletionStats).toBe(false)
     expect(store.onScreenKeyboardVisible).toBe(false)
     expect(store.virtualKeyboardEnabled).toBe(true)
+  })
+})
+
+describe('the interface language', () => {
+  it("defaults to the browser's language when it is supported", async () => {
+    vi.stubGlobal('navigator', { language: 'fr-CA' })
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('fr')
+  })
+
+  it("falls back to English when the browser's language is not supported", async () => {
+    vi.stubGlobal('navigator', { language: 'ja-JP' })
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('en')
+  })
+
+  it('falls back to English when the browser reports no language at all', async () => {
+    vi.stubGlobal('navigator', {})
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('en')
+  })
+
+  it('prefers a stored choice over the browser language', async () => {
+    vi.stubGlobal('navigator', { language: 'fr-FR' })
+    window.localStorage.setItem('typelearn.interfaceLanguage', 'de')
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('de')
+  })
+
+  it('ignores a stored value that is not one of the six supported languages', async () => {
+    vi.stubGlobal('navigator', { language: 'ja-JP' })
+    window.localStorage.setItem('typelearn.interfaceLanguage', 'ja')
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('en')
+  })
+
+  it('is read back by a fresh store instance', async () => {
+    const first = await freshStore()
+    first.interfaceLanguage = 'ru'
+
+    const second = await freshStore()
+    expect(second.interfaceLanguage).toBe('ru')
+  })
+
+  it('does not crash store creation when storage throws on read', async () => {
+    window.localStorage.broken()
+
+    const store = await freshStore()
+    expect(store.interfaceLanguage).toBe('en')
+  })
+
+  it('does not crash a setting change when storage throws on write', async () => {
+    const store = await freshStore()
+    window.localStorage.broken()
+
+    expect(() => {
+      store.interfaceLanguage = 'hu'
+    }).not.toThrow()
+    expect(store.interfaceLanguage).toBe('hu')
+  })
+
+  it("drives vue-i18n's own locale", async () => {
+    const store = await freshStore()
+    expect(i18n.global.locale.value).toBe('en')
+
+    store.interfaceLanguage = 'th'
+    expect(i18n.global.locale.value).toBe('th')
   })
 })

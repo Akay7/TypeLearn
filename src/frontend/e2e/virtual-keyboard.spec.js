@@ -118,3 +118,28 @@ test.describe('the on-screen keyboard, separately from the OS one', () => {
     await expect(page.getByRole('button', { name: 'Backspace' })).toBeVisible()
   })
 })
+
+test.describe('the settings menu on a short screen', () => {
+  // Shorter than the open menu itself, so the menu cannot fit below its button.
+  test.use({ viewport: { width: 1280, height: 420 } })
+
+  test('scrolls inside itself instead of making the page taller', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+    await sentenceOnScreen(page)
+
+    const pageHeight = () => page.evaluate(() => document.documentElement.scrollHeight)
+    const before = await pageHeight()
+
+    await settingsButton(page).click()
+    const menu = page.locator('[aria-haspopup="true"] + div')
+    await expect(menu).toBeVisible()
+
+    expect(await pageHeight()).toBe(before)
+    expect(await menu.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
+
+    // The last control is still reachable by scrolling the menu.
+    await page.locator('#interface-language').selectOption('de')
+    await expect(page.locator('#interface-language')).toHaveValue('de')
+  })
+})

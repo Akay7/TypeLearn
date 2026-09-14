@@ -1,5 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useExerciseStore } from '../stores/exercise'
 import { useStatsStore } from '../stores/stats'
@@ -18,6 +19,7 @@ import { useStatsStore } from '../stores/stats'
 // as one control.
 const store = useExerciseStore()
 const stats = useStatsStore()
+const { t } = useI18n()
 
 const nextButton = ref(null)
 
@@ -62,24 +64,24 @@ onBeforeUnmount(() => document.removeEventListener('keyup', onKeyup))
   -->
   <div class="flex w-full items-center justify-center" aria-live="polite">
     <table class="mr-48 border-separate border-spacing-x-3 border-spacing-y-1 text-sm">
-      <caption class="sr-only">Practice totals, today and over the last 7 days</caption>
+      <caption class="sr-only">{{ t('stats.caption') }}</caption>
       <thead>
         <tr class="text-xs font-normal opacity-60">
           <th scope="col"></th>
-          <th scope="col" class="font-normal">Symbols correct</th>
-          <th scope="col" class="font-normal">Key presses</th>
-          <th scope="col" class="font-normal">Exercises completed</th>
+          <th scope="col" class="font-normal">{{ t('stats.symbolsCorrect') }}</th>
+          <th scope="col" class="font-normal">{{ t('stats.keysPressed') }}</th>
+          <th scope="col" class="font-normal">{{ t('stats.exercisesCompleted') }}</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th scope="row" class="pr-2 text-left font-semibold text-(--text-h)">Today</th>
+          <th scope="row" class="pr-2 text-left font-semibold text-(--text-h)">{{ t('stats.today') }}</th>
           <td class="text-center tabular-nums">{{ stats.today.symbolsCorrect }}</td>
           <td class="text-center tabular-nums">{{ stats.today.keysPressed }}</td>
           <td class="text-center tabular-nums">{{ stats.today.exercisesCompleted }}</td>
         </tr>
         <tr>
-          <th scope="row" class="pr-2 text-left font-semibold text-(--text-h)">Last 7 days</th>
+          <th scope="row" class="pr-2 text-left font-semibold text-(--text-h)">{{ t('stats.last7Days') }}</th>
           <td class="text-center tabular-nums">{{ stats.last7Days.symbolsCorrect }}</td>
           <td class="text-center tabular-nums">{{ stats.last7Days.keysPressed }}</td>
           <td class="text-center tabular-nums">{{ stats.last7Days.exercisesCompleted }}</td>
@@ -121,7 +123,7 @@ onBeforeUnmount(() => document.removeEventListener('keyup', onKeyup))
         class="w-44 shrink-0 rounded-full bg-indigo-600 px-6 py-3 text-base font-medium whitespace-nowrap text-white transition hover:bg-indigo-500"
         @click="store.next()"
       >
-        Next exercise →
+        {{ t('stats.next') }}
       </button>
     </div>
   </div>

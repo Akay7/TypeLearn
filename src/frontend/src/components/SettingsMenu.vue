@@ -1,9 +1,11 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useSettingsStore } from '../stores/settings'
 
 const settings = useSettingsStore()
+const { t } = useI18n()
 
 const open = ref(false)
 const root = ref(null)
@@ -13,10 +15,13 @@ const root = ref(null)
 // radiogroup template below instead of two near-duplicates. The third is a
 // plain boolean, so it gets its own `kind: 'checkbox'` and a single-control
 // template instead of a two-option radiogroup — see design.md for why.
-const GROUPS = [
+// A computed, not a plain constant: `t(...)` reads the active locale
+// reactively, but an array built from it once at module load would not
+// follow a later change to `settings.interfaceLanguage`.
+const GROUPS = computed(() => [
   {
     field: 'virtualKeyboardOverride',
-    title: 'Virtual keyboard',
+    title: t('settings.keyboardOverride.title'),
     kind: 'radiogroup',
     // Device classification can only guess whether a phone-sized screen has
     // no physical keyboard and a larger one does — this is how the learner
@@ -24,20 +29,40 @@ const GROUPS = [
     // rather than an implicit default, so a learner who forced it once can
     // see how to get back to it.
     options: [
-      { value: 'auto', label: 'Auto', description: 'Match this device' },
-      { value: 'on', label: 'On', description: 'Always show it' },
-      { value: 'off', label: 'Off', description: 'Never show it' },
+      {
+        value: 'auto',
+        label: t('settings.keyboardOverride.auto.label'),
+        description: t('settings.keyboardOverride.auto.description'),
+      },
+      {
+        value: 'on',
+        label: t('settings.keyboardOverride.on.label'),
+        description: t('settings.keyboardOverride.on.description'),
+      },
+      {
+        value: 'off',
+        label: t('settings.keyboardOverride.off.label'),
+        description: t('settings.keyboardOverride.off.description'),
+      },
     ],
   },
   {
     field: 'onScreenKeyboardVisible',
-    title: 'On-screen keyboard',
+    title: t('settings.onScreenKeyboard.title'),
     kind: 'radiogroup',
     // For a learner who already has a physical keyboard and knows it: the
     // board is a lot of screen for something they are not reading off of.
     options: [
-      { value: true, label: 'Show', description: 'The Kedmanee board, with finger colours' },
-      { value: false, label: 'Hide', description: 'Type on your own keyboard alone' },
+      {
+        value: true,
+        label: t('settings.onScreenKeyboard.show.label'),
+        description: t('settings.onScreenKeyboard.show.description'),
+      },
+      {
+        value: false,
+        label: t('settings.onScreenKeyboard.hide.label'),
+        description: t('settings.onScreenKeyboard.hide.description'),
+      },
     ],
   },
   {
@@ -47,9 +72,22 @@ const GROUPS = [
     // a sibling pair of named options, so this carries its own label and
     // description on the row itself rather than a separate caption heading
     // above it like the radiogroup-based settings have.
-    label: 'Summary on complete',
-    description: 'Statistics for today and the last 7 days',
+    label: t('settings.completionStats.label'),
+    description: t('settings.completionStats.description'),
   },
+])
+
+// Every interface language, named in itself rather than translated into
+// whichever one is currently active — the universal convention for a
+// language picker, and the only choice that stays readable to a learner who
+// cannot yet read the active language at all.
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'fr', label: 'Français' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'th', label: 'ไทย' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'hu', label: 'Magyar' },
 ]
 
 function choose(group, value) {
@@ -102,7 +140,7 @@ onBeforeUnmount(() => {
       ]"
       aria-haspopup="true"
       :aria-expanded="open"
-      aria-label="Settings"
+      :aria-label="t('settings.button.label')"
       @click="open = !open"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -118,7 +156,7 @@ onBeforeUnmount(() => {
          the exercise behind it for a choice that takes one tap. -->
     <div
       v-if="open"
-      class="absolute top-full right-0 z-10 mt-2 w-56 rounded-2xl border border-black/10 bg-[var(--bg)] p-3.5 shadow-xl dark:border-white/15"
+      class="absolute top-full right-0 z-10 mt-2 max-h-[calc(100dvh-5rem)] w-56 overflow-y-auto overscroll-contain rounded-2xl border border-black/10 bg-[var(--bg)] p-3.5 shadow-xl dark:border-white/15"
     >
       <div
         v-for="(group, index) in GROUPS"
@@ -208,6 +246,30 @@ onBeforeUnmount(() => {
             </span>
           </button>
         </template>
+      </div>
+
+      <!-- A native select rather than a third radiogroup: six options are
+           past the point a row-per-option list reads well in this width, and
+           unlike the other two settings, the choices here don't take a short
+           label plus description — just a name, which a select shows without
+           adding rows to the menu at all. -->
+      <div class="mt-3 border-t border-black/10 pt-3 dark:border-white/10">
+        <label
+          for="interface-language"
+          class="mb-1.5 block px-1.5 text-[11px] font-semibold tracking-wide text-black/50 uppercase dark:text-white/50"
+        >
+          {{ t('settings.language.title') }}
+        </label>
+
+        <select
+          id="interface-language"
+          v-model="settings.interfaceLanguage"
+          class="w-full rounded-lg border border-black/15 bg-transparent px-2.5 py-2 text-sm font-medium text-(--text-h) dark:border-white/20"
+        >
+          <option v-for="language in LANGUAGES" :key="language.value" :value="language.value">
+            {{ language.label }}
+          </option>
+        </select>
       </div>
     </div>
   </div>

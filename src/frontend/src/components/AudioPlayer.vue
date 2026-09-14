@@ -1,5 +1,8 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineProps({
   src: { type: String, required: true },
@@ -83,7 +86,7 @@ onBeforeUnmount(() => audio.value?.pause())
       class="inline-flex w-32 items-center justify-center whitespace-nowrap rounded-full bg-indigo-600 px-6 py-3 text-base font-medium text-white transition hover:bg-indigo-500"
       @click="toggle"
     >
-      {{ playing ? '⏸ Pause' : '▶ Play' }}
+      {{ playing ? t('audio.pause') : t('audio.play') }}
     </button>
 
     <!-- Below the button, in normal flow, on a phone-width screen: it only
@@ -101,7 +104,7 @@ onBeforeUnmount(() => audio.value?.pause())
       v-if="blocked"
       class="text-center text-sm opacity-60 sm:absolute sm:top-1/2 sm:left-full sm:ml-3 sm:w-max sm:-translate-y-1/2 sm:text-left"
     >
-      Press play to hear it
+      {{ t('audio.autoplayBlocked') }}
     </p>
   </div>
 </template>
