@@ -307,15 +307,18 @@ describe('the sentence the learner is asked for', () => {
   })
 })
 
+/** A fetch response answering the Deck query with `deck`. */
+function deckResponse(deck) {
+  return { ok: true, json: async () => ({ data: { deck } }) }
+}
+
+function exercisesFor(ids) {
+  return ids.map((id) => ({ id, sentence: 'สวัสดี', audioUrl: `/${id}.mp3`, difficulty: 1 }))
+}
+
 describe('loading the catalog', () => {
-  function respondWith(exercises) {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ data: { exercises } }),
-      }),
-    )
+  function respondWith(deck) {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(deckResponse(deck)))
   }
 
   afterEach(() => {
@@ -357,5 +360,94 @@ describe('loading the catalog', () => {
 
     expect(store.status).toBe('empty')
     expect(store.current).toBeNull()
+  })
+})
+
+describe('the deck comes from the server', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('asks for a deck of a fixed size, never the whole catalog', async () => {
+    const fetch = vi.fn().mockResolvedValue(deckResponse(exercisesFor(['1'])))
+    vi.stubGlobal('fetch', fetch)
+
+    await useExerciseStore().load()
+
+    const { query } = JSON.parse(fetch.mock.calls[0][1].body)
+    expect(query).toMatch(/deck\(size: 200\)/)
+    expect(query).not.toMatch(/exercises/)
+  })
+
+  it('keeps the order the server drew', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(deckResponse(exercisesFor(['3', '1', '2']))))
+
+    const store = useExerciseStore()
+    await store.load()
+
+    expect(store.deck.map((exercise) => exercise.id)).toEqual(['3', '1', '2'])
+  })
+
+  it('draws a new deck once the last exercise is done, and starts it', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(deckResponse(exercisesFor(['a1', 'a2'])))
+      .mockResolvedValueOnce(deckResponse(exercisesFor(['b1', 'b2'])))
+    vi.stubGlobal('fetch', fetch)
+
+    const store = useExerciseStore()
+    await store.load()
+    store.next()
+    expect(store.current.id).toBe('a2')
+
+    const refill = store.next()
+    // Still the answered exercise, and never a loading state, while the draw is out.
+    expect(store.current.id).toBe('a2')
+    expect(store.status).toBe('ready')
+    await refill
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(store.current.id).toBe('b1')
+    expect(store.status).toBe('ready')
+    expect(store.typed).toBe('')
+    expect(store.result).toBe(null)
+  })
+
+  it('asks only once when the learner advances again while a draw is out', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(deckResponse(exercisesFor(['a1'])))
+      .mockResolvedValue(deckResponse(exercisesFor(['b1'])))
+    vi.stubGlobal('fetch', fetch)
+
+    const store = useExerciseStore()
+    await store.load()
+    const refill = store.next()
+    store.next()
+    await refill
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts the deck it has again when a new one cannot be drawn', async () => {
+    const failure = new Error('network down')
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(deckResponse(exercisesFor(['a1', 'a2'])))
+        .mockRejectedValueOnce(failure),
+    )
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const store = useExerciseStore()
+    await store.load()
+    store.next()
+    await store.next()
+
+    expect(store.current.id).toBe('a1')
+    expect(store.status).toBe('ready')
+    expect(consoleError).toHaveBeenCalledWith(expect.any(String), failure)
+    consoleError.mockRestore()
   })
 })

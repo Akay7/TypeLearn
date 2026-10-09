@@ -1,0 +1,707 @@
+# Machine translations of the catalog's sentences, loaded by `load_translations`.
+# Written by `translate_catalog`; correct a translation by editing its line.
+# See exercises/translation/fixture.py for the format.
+format: 1
+source: th
+generated_by: claude-opus-5-5 (chat)
+sentences:
+- sentence: ยูเอสบีไดรฟ์
+  sentence_id: 0840999a3c8032d78f0d02345f5e088d27056899da38f1cef31b9130f5643629
+  en: USB drive
+  fr: Clé USB
+  de: USB-Stick
+  ru: USB-накопитель
+  hu: Pendrive
+- sentence: เจ็ดสิบสี่ไมล์
+  sentence_id: 2721325054e81a1f14b96c395b768fbf50cbf0892608b4cce7c5e68bef2c4a70
+  en: Seventy-four miles
+  fr: Soixante-quatorze miles
+  de: Vierundsiebzig Meilen
+  ru: Семьдесят четыре мили
+  hu: Hetvennégy mérföld
+- sentence: ช่างเรียงพิมพ์
+  sentence_id: fae3034a1d224b39e08ba17b3bc036c0cb1b6da06ed0e0cfe4e0ac2de46fedf4
+  en: Typesetter
+  fr: Typographe
+  de: Schriftsetzer
+  ru: Наборщик
+  hu: Betűszedő
+- sentence: วิชาบังคับเลือก
+  sentence_id: 12c9994fc746b5f73bdb2f4f199857251101dce8e23ef40be11eaa229862bede
+  en: Required elective
+  fr: Option obligatoire
+  de: Wahlpflichtfach
+  ru: Обязательный предмет по выбору
+  hu: Kötelezően választható tárgy
+- sentence: ยังคงมีรถจอดอยู่ตรงนั้น
+  sentence_id: 22d0f40f2933eaa3bbb923aede07186220486b943a21c163235e8c75c32a4776
+  en: There's still a car parked there.
+  fr: Il y a encore une voiture garée là.
+  de: Da parkt immer noch ein Auto.
+  ru: Там всё ещё стоит машина.
+  hu: Még mindig áll ott egy autó.
+- sentence: มานี่เพื่อนเก่า
+  sentence_id: 83fae7d8f37430ec6f34a2b42cb56cff79b54d2f3766f247f025f765f75a50b0
+  en: Come here, old friend.
+  fr: Viens ici, mon vieil ami.
+  de: Komm her, alter Freund.
+  ru: Иди сюда, старый друг.
+  hu: Gyere ide, régi barátom.
+- sentence: ขอบคุณที่เข้าใจ
+  sentence_id: 89d46f78f2efd3e9bf85e1ef314920cccd882534c1d32fb388db44c61a9fbbeb
+  en: Thanks for understanding.
+  fr: Merci de ta compréhension.
+  de: Danke für dein Verständnis.
+  ru: Спасибо за понимание.
+  hu: Köszönöm a megértést.
+- sentence: ทะเลอาหรับ
+  sentence_id: eb67d950c0e78d5eed7fecd1998c084a1930298b41cb000f7628d8a59b6f33e0
+  en: The Arabian Sea
+  fr: La mer d'Arabie
+  de: Das Arabische Meer
+  ru: Аравийское море
+  hu: Az Arab-tenger
+- sentence: สองโมงเช้า
+  sentence_id: 23903d62873d36cfa3ae63ce21f35df9446cd23f7e3bf822ac45fe0d94cf0e8b
+  en: Eight in the morning
+  fr: Huit heures du matin
+  de: Acht Uhr morgens
+  ru: Восемь часов утра
+  hu: Reggel nyolc óra
+- sentence: วันเข้าพรรษา
+  sentence_id: 0cbc163e946371b9c0169239a8a33f92e66bca6ea19bb104ac4c6fee4c4fd72f
+  en: Buddhist Lent Day (Khao Phansa)
+  fr: Le début du carême bouddhiste (Khao Phansa)
+  de: Beginn der buddhistischen Fastenzeit (Khao Phansa)
+  ru: День начала буддийского поста (Кхао Пханса)
+  hu: A buddhista böjt kezdete (Khao Phansa)
+- sentence: พฤติกรรมเบี่ยงเบน
+  sentence_id: fdbc97de1de71959eb0858292aa5f652248780e620d4b86a838267e3d077a643
+  en: Deviant behavior
+  fr: Comportement déviant
+  de: Abweichendes Verhalten
+  ru: Девиантное поведение
+  hu: Deviáns viselkedés
+- sentence: มีที่จอดรถว่างอีกเท่าไหร่
+  sentence_id: 176694231fa8099f2bfdd55c24e24cfab6715134259f4ff97b27ff438fc3bc44
+  en: How many free parking spaces are left?
+  fr: Combien de places de parking reste-t-il ?
+  de: Wie viele Parkplätze sind noch frei?
+  ru: Сколько ещё свободных парковочных мест?
+  hu: Hány szabad parkolóhely van még?
+- sentence: ฉันไม่มีกำลังนับ
+  sentence_id: 161171a5eda6d4fa97c38b35d5922bc891c431988f4608cac7841479b918d221
+  en: I don't have the strength to count.
+  fr: Je n'ai pas la force de compter.
+  de: Ich habe nicht die Kraft zu zählen.
+  ru: У меня нет сил считать.
+  hu: Nincs erőm számolni.
+- sentence: ควรจะร้องเพลงไหน
+  sentence_id: 2dd15ebc859470ab5066e153015423697db55433eea44edfdea8d971a22e6596
+  en: Which song should I sing?
+  fr: Quelle chanson devrais-je chanter ?
+  de: Welches Lied soll ich singen?
+  ru: Какую песню мне спеть?
+  hu: Melyik dalt énekeljem?
+- sentence: บาดเจ็บเกือบสามสิบราย
+  sentence_id: 2807ef62ed20beac52fe470af6375705e70fb03945246e505bb591f8a734a3e3
+  en: Nearly thirty people injured
+  fr: Près de trente blessés
+  de: Fast dreißig Verletzte
+  ru: Почти тридцать пострадавших
+  hu: Közel harminc sérült
+- sentence: เขามีคดีติดตัว
+  sentence_id: 150f3c0c44e0fe47ed454cb192070551afcb6fbc97065644709fe0662d62c05f
+  en: He has a case pending against him.
+  fr: Il a une affaire judiciaire en cours.
+  de: Gegen ihn läuft ein Verfahren.
+  ru: На нём висит судебное дело.
+  hu: Folyamatban van ellene egy ügy.
+- sentence: ฉันพยายามอ่านคืนสุดท้าย
+  sentence_id: 0c2ef41451a47e68947aa290253f7f3dffb9437a59e6d433fc2206589e1a90bd
+  en: I tried to read on the last night.
+  fr: J'ai essayé de lire la dernière nuit.
+  de: Ich habe versucht, in der letzten Nacht zu lesen.
+  ru: Я пытался читать в последнюю ночь.
+  hu: Az utolsó éjszaka megpróbáltam olvasni.
+- sentence: สถานประกอบการ
+  sentence_id: f16e4f3cd7af9b0e4e580ce67d7e373748abe5aa4744385a013fd95b1561fa0e
+  en: Business establishment
+  fr: Établissement commercial
+  de: Gewerbebetrieb
+  ru: Предприятие
+  hu: Vállalkozás telephelye
+- sentence: รหัสไปรษณีย์
+  sentence_id: 05083a80f8ef37f052f180dfc3e0bc929adec996882d11d89fc1db49e72cfae7
+  en: Postal code
+  fr: Code postal
+  de: Postleitzahl
+  ru: Почтовый индекс
+  hu: Irányítószám
+- sentence: เธอไม่ใช่สเปคของเขา
+  sentence_id: 13fbf823fde046f96e0f87206b70d2980b4e0bdb8b858679fa637c33e188acab
+  en: She's not his type.
+  fr: Ce n'est pas son genre.
+  de: Sie ist nicht sein Typ.
+  ru: Она не в его вкусе.
+  hu: Nem az esete.
+- sentence: และเร่งพัฒนาการเพาะเลี้ยง
+  sentence_id: f975057b69cc0ef532a8053cd306c501ac5f130c057fe257e5a35bec06326c4b
+  en: and speed up the development of farming
+  fr: et accélérer le développement de l'élevage
+  de: und die Entwicklung der Zucht vorantreiben
+  ru: и ускорить развитие разведения
+  hu: és felgyorsítani a tenyésztés fejlesztését
+- sentence: ผักกาดดองด่วนรถไฟด่วน
+  sentence_id: 0d51856df523f8293f056e24620ad635c98aed9a38eef36c4b5660a0e2ad872f
+  en: Express pickled mustard greens, express train
+  fr: Chou moutarde mariné express, train express
+  de: Eingelegter Senfkohl express, Schnellzug
+  ru: Квашеная горчица экспресс, скорый поезд
+  hu: Expressz savanyú mustárlevél, gyorsvonat
+- sentence: เขาอยากกินพายชิ้นเล็ก ๆ
+  sentence_id: 30ff6f25c3548a497219e16c30e6858d542fe0749627886f0aeb0b1ce7dd930f
+  en: He wants to eat a small piece of pie.
+  fr: Il veut manger une petite part de tarte.
+  de: Er möchte ein kleines Stück Kuchen essen.
+  ru: Он хочет съесть маленький кусочек пирога.
+  hu: Egy kis szelet pitét szeretne enni.
+- sentence: อ้วกว่ะ คือเมา
+  sentence_id: 0e8f914870333589af6cce3dd3141a9824b54667c4413279d6f4ea35867003f3
+  en: Gonna puke, man, I'm drunk.
+  fr: J'vais vomir, je suis bourré.
+  de: Ich muss kotzen, ich bin besoffen.
+  ru: Блин, тошнит, я пьяный.
+  hu: Hányni fogok, be vagyok rúgva.
+- sentence: ปล่อยให้มันเป็นไป
+  sentence_id: 6f2afc35d484275769376f4df06ee86b7da9674cdb4b665a125659539f8a3df2
+  en: Let it be.
+  fr: Laisse faire.
+  de: Lass es geschehen.
+  ru: Пусть будет как будет.
+  hu: Hadd legyen, ahogy lesz.
+- sentence: ด้วยผลศีลผลทาน
+  sentence_id: f8f732ff9618d22f18555d5e9d9dec7eaf095a3b48c5b37a50fae7cd59834e4d
+  en: By the merit of keeping the precepts and giving alms
+  fr: Par le mérite des préceptes et des aumônes
+  de: Durch das Verdienst von Sittlichkeit und Almosen
+  ru: Благодаря заслугам соблюдения заповедей и подаяния
+  hu: Az erkölcsi fogadalmak és az alamizsna érdeméből
+- sentence: รวมทั้งเร่งส่งเสริมการค้า
+  sentence_id: f429f3abec2126c91adf6b127d7cf8bd469d79ff144b0c908bceac0d3797ff46
+  en: as well as speeding up trade promotion
+  fr: ainsi qu'accélérer la promotion du commerce
+  de: sowie die Handelsförderung beschleunigen
+  ru: а также ускорить развитие торговли
+  hu: valamint a kereskedelem ösztönzésének felgyorsítása
+- sentence: มันไกลจากที่นี่ไหม ?
+  sentence_id: af705824bb7cd6dc3da1a8cd5d2cfbf85a7b4eb10ca23c644dc4ce9c40002b3b
+  en: Is it far from here?
+  fr: C'est loin d'ici ?
+  de: Ist es weit von hier?
+  ru: Это далеко отсюда?
+  hu: Messze van innen?
+- sentence: สนุกมากอะ กวนดี
+  sentence_id: fd986683d692d9ed34f95ce6705b49c7ed71440443e29f22dee4cf5ef997e840
+  en: So much fun, cheeky in a good way.
+  fr: Trop drôle, taquin comme il faut.
+  de: Macht echt Spaß, schön frech.
+  ru: Очень весело, так забавно подкалывает.
+  hu: Nagyon szórakoztató, jó pimasz.
+- sentence: ตอนนี้สายตึงมาก
+  sentence_id: 473894fbc43d9e48cfdcb4c234fc835bffaa28063de09f5a2d038318dadf762d
+  en: The line is very taut now.
+  fr: La corde est très tendue maintenant.
+  de: Die Leine ist jetzt sehr straff.
+  ru: Сейчас верёвка сильно натянута.
+  hu: Most nagyon feszes a zsinór.
+- sentence: ขนาดย่อมยุคใหม่ของไทย
+  sentence_id: e3f4956b2d008b863bd554547606d6406849f8cfdc8b63055238b7fa6ae30df6
+  en: Thailand's new generation of small businesses
+  fr: Les petites entreprises thaïlandaises de nouvelle génération
+  de: Kleine thailändische Unternehmen der neuen Generation
+  ru: Малые предприятия Таиланда нового поколения
+  hu: Thaiföld új generációs kisvállalkozásai
+- sentence: วันก่อนกินอะไรนะ จำไม่ได้
+  sentence_id: fee081885bcf8e270550537639a487da460c687ae12d6ee6e96f5b269a7eda7d
+  en: What did I eat the other day? I can't remember.
+  fr: Qu'est-ce que j'ai mangé l'autre jour ? Je ne m'en souviens plus.
+  de: Was habe ich neulich gegessen? Ich weiß es nicht mehr.
+  ru: Что я ел на днях? Не помню.
+  hu: Mit is ettem a minap? Nem emlékszem.
+- sentence: ตูลูสเป็นเมืองที่สวย
+  sentence_id: 75823e1b3f2992edec98a52d68788635fe2eb69596f40bcd44aba8777b090ec9
+  en: Toulouse is a beautiful city.
+  fr: Toulouse est une belle ville.
+  de: Toulouse ist eine schöne Stadt.
+  ru: Тулуза — красивый город.
+  hu: Toulouse szép város.
+- sentence: ธนาคารหวั่งหลี
+  sentence_id: d9f8fe375b61dbd5d4deca934594e84951d1cc770067899220aba5766fb9da37
+  en: Wang Lee Bank
+  fr: La banque Wang Lee
+  de: Die Wang-Lee-Bank
+  ru: Банк Ванг Ли
+  hu: A Wang Lee Bank
+- sentence: เพื่อให้ได้
+  sentence_id: be653e6cd2d7678c6d0e37435abade30f38007d8637ced18a9bf379a1068ef9a
+  en: in order to get
+  fr: afin d'obtenir
+  de: um zu erreichen
+  ru: чтобы получить
+  hu: hogy elérjük
+- sentence: สิ้นเดือนแล้ว
+  sentence_id: 922c373f1d5c9223da2dec58d7429cdafd30b3179868482ba8f331c8b16299fc
+  en: It's already the end of the month.
+  fr: C'est déjà la fin du mois.
+  de: Es ist schon Monatsende.
+  ru: Уже конец месяца.
+  hu: Már hónap vége van.
+- sentence: เสนาดีเวลลอปเม้นท์
+  sentence_id: b2b528c317fd4a04e094b06f412798dde9209c6893593ca6d14c25588b330220
+  en: Sena Development
+  fr: Sena Development
+  de: Sena Development
+  ru: Sena Development
+  hu: Sena Development
+- sentence: โพสต์เมื่อวานครับ
+  sentence_id: b836c7b5aa6c6a0479d4aa0fc3c276d4bc07d7b1f7c5b4a76ff3dc0fe5e0959d
+  en: I posted it yesterday.
+  fr: Je l'ai posté hier.
+  de: Ich habe es gestern gepostet.
+  ru: Выложил вчера.
+  hu: Tegnap posztoltam.
+- sentence: พวกเขากำลังเอาเธอออก !
+  sentence_id: 0e204019bffef23645d7e0d640fb4cd0715e9c34247b328bbb40de298e4d0ffe
+  en: They're taking her away!
+  fr: Ils l'emmènent !
+  de: Sie bringen sie weg!
+  ru: Её уводят!
+  hu: Elviszik őt!
+- sentence: การพาณิชยนาวี
+  sentence_id: f1b977066ea296a48ca06041857e358fd96ebe82db1d5624f224eff636c80d4f
+  en: Merchant marine
+  fr: La marine marchande
+  de: Die Handelsmarine
+  ru: Торговый флот
+  hu: Kereskedelmi tengerészet
+- sentence: วัคซีนโควิดในไทย
+  sentence_id: 5b8c2a6c19ca9a936a5d76530b1fd6a061a02a61f78707979177c14d2d070775
+  en: COVID vaccines in Thailand
+  fr: Les vaccins contre le Covid en Thaïlande
+  de: Corona-Impfstoffe in Thailand
+  ru: Вакцины от COVID в Таиланде
+  hu: Covid-oltások Thaiföldön
+- sentence: เสถียร รัตนวงศ์
+  sentence_id: 542835bae9b9fe6f4f9b178f58e6686c50261337d94a58628217aacb6f66e792
+  en: Sathian Rattanawong
+  fr: Sathian Rattanawong
+  de: Sathian Rattanawong
+  ru: Сатхиан Раттанавонг
+  hu: Sathian Rattanawong
+- sentence: อำนาจบาตรใหญ่
+  sentence_id: 259f5da86811e3296f92b9fd630ee9df8886a9f42fe82c3f8ee832608a8b9cc4
+  en: Arbitrary power
+  fr: Pouvoir arbitraire
+  de: Willkürherrschaft
+  ru: Произвол власти
+  hu: Önkényes hatalom
+- sentence: คุณนอนหลับเมื่อไร
+  sentence_id: 765f66039483f8b3665a477ffd9f7f9d9fe273dcf87d9bdbfa072b677d0d18ea
+  en: When did you fall asleep?
+  fr: Quand vous êtes-vous endormi ?
+  de: Wann sind Sie eingeschlafen?
+  ru: Когда вы уснули?
+  hu: Mikor aludt el?
+- sentence: ความเกี่ยวข้อง
+  sentence_id: 138eb4877737c503394f235ee115d005c77d72cb3d1a0ebcb54bdfbe2e61848a
+  en: Connection
+  fr: Le lien
+  de: Der Zusammenhang
+  ru: Связь
+  hu: Összefüggés
+- sentence: ไม่เป็นเรื่อง
+  sentence_id: 215789ed5cd3a27350b3084ccb0f40c8ad91afa199fdda84493e740c6bd302f8
+  en: It's no big deal.
+  fr: Ce n'est rien.
+  de: Nicht der Rede wert.
+  ru: Пустяки.
+  hu: Semmiség.
+- sentence: คุณมีอะไร ?
+  sentence_id: 252800b3558f659519d9f64f8cecb5b5a38308cc7f3215bfdba7d14c08b34863
+  en: What do you have?
+  fr: Qu'est-ce que vous avez ?
+  de: Was haben Sie?
+  ru: Что у вас есть?
+  hu: Mi van önnél?
+- sentence: เพื่อนเดินทาง
+  sentence_id: 011cfd7cd592080431cae61b45581f4004b783e919012a80bb23012c980a71a7
+  en: Travel companion
+  fr: Compagnon de voyage
+  de: Reisegefährte
+  ru: Попутчик
+  hu: Útitárs
+- sentence: สุรศักดิ์มนตรี
+  sentence_id: 4138af51e7f22b6338cbb6fe0502364204cf43d980e6f5c9580c56aa42b79685
+  en: Surasak Montri
+  fr: Surasak Montri
+  de: Surasak Montri
+  ru: Сурасак Монтри
+  hu: Surasak Montri
+- sentence: เสียศักดิ์ศรี
+  sentence_id: 4d80494938aae2493a1e166023f268cdc4e16a7eb116286f4b3a9268c0b3c977
+  en: To lose one's dignity
+  fr: Perdre sa dignité
+  de: Seine Würde verlieren
+  ru: Потерять достоинство
+  hu: Elveszíteni a méltóságát
+- sentence: ความเยือกเย็น
+  sentence_id: 56f2eb59c55326dadc6ee6c8e847fa5962279ca88b7f5a572af79fe020d2ccb9
+  en: Composure
+  fr: Le sang-froid
+  de: Die Gelassenheit
+  ru: Хладнокровие
+  hu: Higgadtság
+- sentence: องค์การโทรศัพท์
+  sentence_id: 05309f5fcbccec932c287bf2c0009647bee364a0f5c6954e1f498583863fa51a
+  en: Telephone Organization
+  fr: L'Organisation téléphonique
+  de: Die Telefonbehörde
+  ru: Телефонная организация
+  hu: A Telefonhivatal
+- sentence: วันแรงงานสากล
+  sentence_id: 2a4bc6bc709655cfba75d357bdb4857369fa867fb8a0cf747d4852bccd050f49
+  en: International Workers' Day
+  fr: La fête internationale des travailleurs
+  de: Der Internationale Tag der Arbeit
+  ru: Международный день трудящихся
+  hu: A munka ünnepe
+- sentence: หรือมีฉันในวันนั้น
+  sentence_id: 2a590f5dd1efdaa5e121e0d60eb68239f11a0f9c7bd20f95ba35614e7938427b
+  en: Or will I be there that day?
+  fr: Ou serai-je là ce jour-là ?
+  de: Oder werde ich an jenem Tag da sein?
+  ru: Или я буду рядом в тот день?
+  hu: Vagy ott leszek azon a napon?
+- sentence: เครื่องมือวัด
+  sentence_id: 42d9cdd2d23e939a4029252d9107c45cd93b98e3fae03a4c40dc0ecb42120b39
+  en: Measuring instrument
+  fr: Instrument de mesure
+  de: Messgerät
+  ru: Измерительный прибор
+  hu: Mérőeszköz
+- sentence: เขาต้องทำอะไร
+  sentence_id: d7109c6e4f687a9c4ce4ad05899ae2d5cbd4808bc21271e2a13c0fd79ca8a152
+  en: What does he have to do?
+  fr: Que doit-il faire ?
+  de: Was muss er tun?
+  ru: Что ему нужно сделать?
+  hu: Mit kell tennie?
+- sentence: เครื่องคิดเลข
+  sentence_id: fe47d99b10c9d60571f0ef9070fe4a55a86ac011f42f590110b30a0d0efc317f
+  en: Calculator
+  fr: Calculatrice
+  de: Taschenrechner
+  ru: Калькулятор
+  hu: Számológép
+- sentence: แผ่นรองเม้าส์
+  sentence_id: 0988413221e23c955f54b4b182c2edd92f797ed7e1ce3abb3c6517d0a21fe309
+  en: Mouse pad
+  fr: Tapis de souris
+  de: Mauspad
+  ru: Коврик для мыши
+  hu: Egérpad
+- sentence: หนุ่มทั้งแท่ง
+  sentence_id: 1b5c048d75687fe032369629e77553312f9cb7158b911b0bae2025a0e1a29499
+  en: A bachelor through and through
+  fr: Un vrai célibataire
+  de: Ein Junggeselle durch und durch
+  ru: Настоящий холостяк
+  hu: Vérbeli agglegény
+- sentence: ความเปลี่ยนแปลง
+  sentence_id: 1ca420c5eef9f8ff3f5c362846cd4ce44d7ee15d2c60e8c87615b709da17d8f2
+  en: Change
+  fr: Le changement
+  de: Die Veränderung
+  ru: Перемены
+  hu: Változás
+- sentence: ความระทมทุกข์
+  sentence_id: 26aa40a019ab671b768fb68aaf78b2b0b231ee659e346de223779e95c0b6e51a
+  en: Anguish
+  fr: L'angoisse
+  de: Der Kummer
+  ru: Скорбь
+  hu: Gyötrelem
+- sentence: เอาจริงเอาจัง
+  sentence_id: 3b11260e052dabfdc60c487b136f3a4bd9481fc703b9858921a823d867e64921
+  en: Dead serious
+  fr: Très sérieux
+  de: Todernst
+  ru: Всерьёз
+  hu: Halálosan komolyan
+- sentence: เอนเตอร์เทนเมนต์
+  sentence_id: 47b66db007de9229f84412541a87d39a845d18329d00ca56abe2cd0c25e7b484
+  en: Entertainment
+  fr: Divertissement
+  de: Unterhaltung
+  ru: Развлечения
+  hu: Szórakoztatás
+- sentence: ทั้งเนื้อทั้งตัว
+  sentence_id: 505ae90dbb21ef5c586e4db20cfb13b902e4d3f7574d2a096f17e97cabd5086d
+  en: All I have in the world
+  fr: Tout ce que j'ai au monde
+  de: Alles, was ich besitze
+  ru: Всё, что у меня есть
+  hu: Minden, amim van
+- sentence: ไปรษณีย์อากาศ
+  sentence_id: 52390d642e1e1643af5c14d0473464a21eaa5c54eed7513a5d5fe6ab5a311e5e
+  en: Airmail
+  fr: Poste aérienne
+  de: Luftpost
+  ru: Авиапочта
+  hu: Légiposta
+- sentence: ล้างครกด้วย
+  sentence_id: 57d1b42774b7185e805f5888771bf84f63906004c33f33bac413699f68485cfa
+  en: Wash the mortar too.
+  fr: Lave aussi le mortier.
+  de: Wasch auch den Mörser ab.
+  ru: Помой и ступку.
+  hu: A mozsarat is mosd el.
+- sentence: เรื่องอื้อฉาว
+  sentence_id: 6a9eb188b2a8339ea05d4f601cfdd7af023cd0543574a17b3d98ec0902313270
+  en: Scandal
+  fr: Un scandale
+  de: Ein Skandal
+  ru: Скандал
+  hu: Botrány
+- sentence: อย่าเป็นคนโง่!
+  sentence_id: 08acf3942d1a43a7364c8056b559939a659dbf5420c0861aa03e0ff917a3fb7c
+  en: Don't be a fool!
+  fr: Ne sois pas idiot !
+  de: Sei kein Dummkopf!
+  ru: Не будь дураком!
+  hu: Ne légy bolond!
+- sentence: เธอส่ายหัว
+  sentence_id: 4a1ea61901def0330081a977d93cd9c8f10242d77a9e13e475785173e26d337a
+  en: She shook her head.
+  fr: Elle secoua la tête.
+  de: Sie schüttelte den Kopf.
+  ru: Она покачала головой.
+  hu: Megrázta a fejét.
+- sentence: ทำนองเดียวกับ
+  sentence_id: 1542b58ca686a70ccc3126b9350cb1729ae93949d1b1717d25712defe0b4375a
+  en: Similar to
+  fr: De la même manière que
+  de: Ähnlich wie
+  ru: Подобно
+  hu: Hasonlóan, mint
+- sentence: ปิดสามทุ่ม
+  sentence_id: 2fc5f6a2ad633911b54a1fe41f17f7abc72fb601b6cd8117362eff8483102e0e
+  en: Closes at 9 p.m.
+  fr: Ferme à 21 h.
+  de: Schließt um 21 Uhr.
+  ru: Закрывается в девять вечера.
+  hu: Este kilenckor zár.
+- sentence: ภายใต้มะนาว
+  sentence_id: 46842e5361175033b7876c51c12101f86b73629bfc43b49f213ba2ce704b2286
+  en: Under the lime
+  fr: Sous le citron vert
+  de: Unter der Limette
+  ru: Под лаймом
+  hu: A lime alatt
+- sentence: บอกเบอร์ด้วยครับ
+  sentence_id: 502fe74b5ad60a01aab94f3bf258f21d8ee6a46aebcef214b7466d09e5b1b45f
+  en: Could you tell me your number, please?
+  fr: Pouvez-vous me donner votre numéro, s'il vous plaît ?
+  de: Sagen Sie mir bitte Ihre Nummer.
+  ru: Скажите, пожалуйста, ваш номер.
+  hu: Megmondaná a számát?
+- sentence: ประกวดความงาม
+  sentence_id: fb838ca87f662a8a62b60450727e26bf2b045885fabf567e53604fa02cf4e507
+  en: Beauty pageant
+  fr: Concours de beauté
+  de: Schönheitswettbewerb
+  ru: Конкурс красоты
+  hu: Szépségverseny
+- sentence: ทั้งอย่างนั้น
+  sentence_id: 1978af424f6f6253709d6256b498cedb27624fb62e70c7c04b9415cf183d8cb4
+  en: Even so
+  fr: Quand même
+  de: Trotzdem
+  ru: И всё же
+  hu: Még így is
+- sentence: โรคสะเก็ดเงิน
+  sentence_id: 19e6ae8be2efde4e9c8142f3183fc50b0a2cad58f8d71e4dcbbd464213845dee
+  en: Psoriasis
+  fr: Le psoriasis
+  de: Schuppenflechte
+  ru: Псориаз
+  hu: Pikkelysömör
+- sentence: ความเกี่ยวข้องกัน
+  sentence_id: 35a9827493b207e06d8be4d4df07e96f9c33c608602eaa032f9eab1b136bf812
+  en: Interconnection
+  fr: Le lien entre eux
+  de: Der Zusammenhang untereinander
+  ru: Взаимосвязь
+  hu: Kölcsönös összefüggés
+- sentence: หมี่ผัดกระเฉด
+  sentence_id: 5183a00c9ed0d27a2ade22fefdfb661f1f70636ce88da440bcd2498f1b19aa32
+  en: Stir-fried noodles with water mimosa
+  fr: Nouilles sautées au mimosa d'eau
+  de: Gebratene Nudeln mit Wassermimose
+  ru: Жареная лапша с водяной мимозой
+  hu: Pirított tészta vízimimózával
+- sentence: พริกสามเม็ด
+  sentence_id: 55bca851132467f5947df4974dc46dcb6763e918c555bcaef37f7fc12fec4035
+  en: Three chili peppers
+  fr: Trois piments
+  de: Drei Chilischoten
+  ru: Три перчика чили
+  hu: Három chilipaprika
+- sentence: พื้นที่หน้าตัด
+  sentence_id: ec3a8dd25fd35fdfbc3a40ed724b4a4824b5ef13c691a7b054995c5545151e84
+  en: Cross-sectional area
+  fr: Aire de la section transversale
+  de: Querschnittsfläche
+  ru: Площадь поперечного сечения
+  hu: Keresztmetszeti terület
+- sentence: กระดิกกระเดี้ย
+  sentence_id: f5b9f7e1ce5ebecf9efb8400b2c85c00e1fe7fd975e6f995d29425c24420716c
+  en: Coy and fidgety
+  fr: Minaudier
+  de: Geziert
+  ru: Жеманный
+  hu: Kényeskedő
+- sentence: เฉพาะอย่างยิ่ง
+  sentence_id: fbfd0ac5a31bf5341fff40e1db4fbb5a34516bb663355e8eab31cf92db2bf2b2
+  en: Especially
+  fr: En particulier
+  de: Insbesondere
+  ru: Особенно
+  hu: Különösen
+- sentence: วันสงกรานต์
+  sentence_id: 0fdb7eecdcd06c8a165584a4022ddbe21f9b7bb2da76e804f4e02918b7aa49b4
+  en: Songkran Day
+  fr: Le jour de Songkran
+  de: Der Songkran-Tag
+  ru: День Сонгкран
+  hu: Songkran napja
+- sentence: คุณมาจากไหน
+  sentence_id: 142acc01c5c95cd67486c06b4e26a01fb3473dfe6418984521375f32527f2213
+  en: Where are you from?
+  fr: D'où venez-vous ?
+  de: Woher kommen Sie?
+  ru: Откуда вы?
+  hu: Honnan jön?
+- sentence: ปลาทูเจี๋ยน
+  sentence_id: 25656e1c8347adedab99f63972ef6af3d06abcb019bb34590883dd37471eaa6f
+  en: Mackerel fried with ginger and soy sauce
+  fr: Maquereau frit au gingembre et à la sauce soja
+  de: Gebratene Makrele mit Ingwer und Sojasoße
+  ru: Жареная скумбрия с имбирём и соевым соусом
+  hu: Gyömbéres-szójaszószos sült makréla
+- sentence: ไม่มีอะไรเกิดขึ้นแล้ว
+  sentence_id: 2a67c666dcf3d9417c01ce434c046a9f9fddbf1ae2b5746a6b224e51490fd075
+  en: Nothing happens anymore.
+  fr: Il ne se passe plus rien.
+  de: Es passiert nichts mehr.
+  ru: Больше ничего не происходит.
+  hu: Már nem történik semmi.
+- sentence: ลูกเล็กเด็กแดง
+  sentence_id: 4050577deaa9d12affc639ce1150b5e7ed555dc5081c65630aa87d8ce7316b46
+  en: Small children
+  fr: Les petits enfants
+  de: Kleine Kinder
+  ru: Малые дети
+  hu: Kisgyerekek
+- sentence: กินสี่จ่ายสาม
+  sentence_id: 4648658622a693dc245d55439ad92a47a4738fad49cccceef1c606032b25fd38
+  en: Eat four, pay for three
+  fr: Mangez-en quatre, payez-en trois
+  de: Iss vier, zahl drei
+  ru: Съешь четыре, заплати за три
+  hu: Egyél négyet, fizess hármat
+- sentence: เสียงบรรยาย
+  sentence_id: 52b54b6185715a9eb25cecf5769efc0333a654f74a40d98db9283e1ea0e9e48d
+  en: Narration
+  fr: La narration
+  de: Die Erzählstimme
+  ru: Закадровый голос
+  hu: Narráció
+- sentence: เหนือธรรมชาติ
+  sentence_id: 56a804a69c49723108ae10b85283c19506113a2c26e59d368bdf671335fbb76a
+  en: Supernatural
+  fr: Surnaturel
+  de: Übernatürlich
+  ru: Сверхъестественный
+  hu: Természetfeletti
+- sentence: รู้เห็นเป็นใจ
+  sentence_id: f9b4b8b2f5d230e37e5e8e87eb132222cf476cee44297dab7d03a4dd0f0701b5
+  en: To be in collusion
+  fr: Être de connivence
+  de: Unter einer Decke stecken
+  ru: Быть в сговоре
+  hu: Összejátszani
+- sentence: บริการของภาครัฐ
+  sentence_id: 09ccb55ad1580e45b7b61e055cb0ae7e0c480f27d8106314cf4c22ce5d700412
+  en: Public services
+  fr: Les services publics
+  de: Öffentliche Dienstleistungen
+  ru: Государственные услуги
+  hu: Közszolgáltatások
+- sentence: ดึงจากไหนอ่ะ
+  sentence_id: 0ba3b89a32557caace13d6b1b3a511ed3255af11e8e6fdf3737fda2028a24d05
+  en: Where'd you pull that from?
+  fr: Tu sors ça d'où ?
+  de: Wo hast du das her?
+  ru: Откуда ты это взял?
+  hu: Ezt honnan szedted?
+- sentence: แม่ย่างม้าเหาะ
+  sentence_id: 225017caf71fefe6ed7515708932f8c33cd412baa20848739469de198050b83d
+  en: The flying horse stance (Mae Yang Ma Hao)
+  fr: La posture du cheval volant (Mae Yang Ma Hao)
+  de: Die Haltung des fliegenden Pferdes (Mae Yang Ma Hao)
+  ru: Стойка «летящий конь» (Мэ Янг Ма Хао)
+  hu: A repülő ló tartás (Mae Yang Ma Hao)
+- sentence: จอมพลถนอม กิตติขจร
+  sentence_id: 346adeff738df660ce8e3951e1ee56488fbd794dbb9124b0051214f51155a9a4
+  en: Field Marshal Thanom Kittikachorn
+  fr: Le maréchal Thanom Kittikachorn
+  de: Feldmarschall Thanom Kittikachorn
+  ru: Фельдмаршал Таном Киттикачон
+  hu: Thanom Kittikachorn tábornagy
+- sentence: กระตุ้งกระติ้ง
+  sentence_id: 3524b572d3924acb1e188ecbbadf669c46db35d7bb1f04f9f09ff631410fb414
+  en: Flamboyantly effeminate
+  fr: Maniéré
+  de: Tuntig
+  ru: Манерный
+  hu: Affektált
+- sentence: การพักผ่อนหย่อนใจ
+  sentence_id: 4ba875ed01ceb11c5984ce67e386ea0a6a7d9aa07d90c6b9cf86d2e4d8c36ef6
+  en: Recreation
+  fr: La détente
+  de: Die Erholung
+  ru: Отдых
+  hu: Kikapcsolódás
+- sentence: เด็กในอุปการะ
+  sentence_id: 575b97e5e2b2dc4fe7f0affce6e683d85a0a87c7d4218290cf6cac806a3d4fac
+  en: A child in one's care
+  fr: Un enfant à charge
+  de: Ein Pflegekind
+  ru: Подопечный ребёнок
+  hu: Gondozott gyermek
+- sentence: เหลืออดเหลือทน
+  sentence_id: 1ab9042dfe5bc5a8d1aafc7036aae30ccd175280fa75eaef5b93ebd330c81b05
+  en: Unbearable
+  fr: Insupportable
+  de: Unerträglich
+  ru: Невыносимо
+  hu: Tűrhetetlen
+- sentence: ความหวาดหวั่น
+  sentence_id: 1d87a11ae2a185f01d30a41920727a3c5803445e61a88343a5406250026187ed
+  en: Apprehension
+  fr: L'appréhension
+  de: Die Beklommenheit
+  ru: Тревога
+  hu: Aggodalom

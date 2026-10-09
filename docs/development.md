@@ -102,10 +102,65 @@ Then press **Ingest the corpus** in the Tilt UI. It selects 100 exercises from
 clips into the shared media volume. The selection is deterministic — the same
 corpus always yields the same 100 exercises — and it is safe to re-run.
 
+100 is the chart's default for `ingest.count`, and a deployment sets `all` (see
+[deployment.md](deployment.md#loading-the-exercises)). To try the full catalog
+locally — about 21k exercises, 400 MB of clips, a few minutes — render the same
+Job the button does with the size overridden (only the Job mounts the corpus, so
+the backend pod cannot run it). The button reads the backend image from Tilt;
+here it is whatever the running backend uses:
+
+```bash
+NS=<namespace>
+IMAGE=$(kubectl get deploy backend -n $NS -o jsonpath='{.spec.template.spec.containers[0].image}')
+kubectl delete job ingest -n $NS --ignore-not-found
+helm template typelearn chart --namespace $NS --values .tilt/values.yaml \
+  --set ingest.enabled=true --set ingest.corpusHostPath=/corpus --set ingest.count=all \
+  --set-string image.backend.repository="${IMAGE%:*}" --set-string image.backend.tag="${IMAGE##*:}" \
+  --show-only templates/ingest-job.yaml | kubectl apply -n $NS -f -
+kubectl logs -n $NS -f job/ingest
+```
+
+The clips land in the shared `data/media`, so every worktree sees them; the rows
+land only in that worktree's database. Running with a count afterwards does not
+shrink it again — ingestion adds and updates, it never deletes.
+
 The clips live in `data/media` on the host, shared by every worktree and outliving
 the cluster, so this only has to happen once even if you delete and recreate the
 cluster. They are written by the container and owned by a mapped user id; the
 Tiltfile keeps the directory writable so you can still remove them yourself.
+
+### 4. Translations (optional)
+
+The **Show translation** setting needs translations to show. They are committed:
+`src/backend/exercises/fixtures/translations/th.yaml` holds the machine
+translation of every sentence ingestion can select, and **Ingest the corpus**
+loads it with `load_translations` after the corpus. Nothing needs a key or a
+network.
+
+The file is made once, on a developer's machine, with the Anthropic API. The key
+lives only in that shell. It is not in `.env`, the Secret, or the chart. The
+command reads the Common Voice release directly, the same selection ingestion
+makes, so it needs neither the cluster nor a database. Start with a trial run:
+
+```bash
+cd src/backend
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run python manage.py translate_catalog "$TYPELEARN_CORPUS_DIR" --limit 20
+```
+
+Read what came back, then run it without `--limit`. For the whole catalog (about
+21k sentences into 5 languages) that is about 4,300 requests, a one-time spend.
+A re-run only requests the languages an entry is missing, and an interrupted run
+keeps everything that was saved: the file is written every 30 seconds and on
+exit. `--model` and `--effort` trade quality for cost, and `--languages en,ru`
+narrows the targets. Review the diff and commit the file.
+
+To fix a bad translation, edit its line and commit. Loading replaces the text
+and clears that translation's ratings, because they were cast on different
+words. To try the command out without a key, use `--provider offline --dir
+<scratch dir>`, which writes placeholders (`[fr] สวัสดี`). It refuses to write
+them over the committed file. Suggestions made in the app wait under
+**Translations** in the admin (`/admin/`) until they are approved there.
 
 ### Running several worktrees at once
 

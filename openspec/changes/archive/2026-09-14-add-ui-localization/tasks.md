@@ -38,10 +38,9 @@
 - [x] 7.1 Verify end-to-end (Playwright) that a chosen language persists across a reload, per the existing settings' persistence tests as a pattern to follow
 - [x] 7.2 Verify end-to-end (Playwright, with the browser locale set) that a supported browser language is picked up as the default on first visit, and that an unsupported one falls back to English
 
-## 8. Translation on Weblate
+## 8. Translation catalogs
 
 - [x] 8.1 Convert `src/frontend/src/locales/*.js` to flat `*.json` catalogs imported by `i18n.js`, and verify the unit suite still passes
 - [x] 8.2 Drop empty strings from the catalogs in `i18n.js` so untranslated strings fall back to English, and relax the catalog test to allow missing/empty keys while rejecting keys `en.json` lacks and mismatched `{placeholder}` names
-- [x] 8.3 Document the Hosted Weblate component settings (file mask, base file, format, check flags) and the steps to add a new language in the README
+- [x] 8.3 Document the steps to translate and to add a new language in the README
 - [x] 8.5 Store `sentence.symbolCount` as CLDR plural keys (`_one`, `_few`, `_many`, `_other`) rendered through a `tPlural` helper, so the hint is grammatical in every language, and verify with a unit test covering Russian's one/few/many forms and a missing form falling back
-- [ ] 8.4 Create the project and component on Hosted Weblate and apply for the Libre hosting plan (done by the maintainer in Weblate's UI)

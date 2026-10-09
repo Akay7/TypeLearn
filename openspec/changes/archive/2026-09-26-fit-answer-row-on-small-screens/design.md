@@ -63,7 +63,7 @@ md and up — summary
 
 `AnswerRowButton.vue` renders both. Below `md` it's a `size-12` circle with a glyph, and the label is kept as `sr-only` text so the accessible name, and every test that finds the button by name, is unchanged. From `md` up it's a pill. Inside the pill, both labels (`answer.check`, `stats.next`) are stacked invisibly in the same CSS grid cell as the visible one, so the pill is exactly as wide as the wider label. Check and Next are therefore the same size by construction, in any language.
 
-*Alternatives:* a larger fixed width (e.g. `w-64`) only moves the overflow point to the next long translation, and it costs the field width in every language. A per-locale width table can't be maintained through Weblate.
+*Alternatives:* a larger fixed width (e.g. `w-64`) only moves the overflow point to the next long translation, and it costs the field width in every language. A per-locale width table can't be maintained as translators add languages.
 
 *Breakpoint `md`, not `sm`:* at 640px the Russian pill (~250px) plus the summary's widest table doesn't fit the 592px column. At 768px (720px column) every locale fits with room to spare.
 

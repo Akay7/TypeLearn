@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { SENTENCES, clickThrough, disableCompletionStats, mockBackend, sentenceOnScreen } from './fixtures'
+import { LONGEST, SENTENCES, clickThrough, disableCompletionStats, mockBackend, sentenceOnScreen } from './fixtures'
 
 const field = (page) => page.locator('input[lang="th"]')
 const nextButton = (page) => page.getByRole('button', { name: 'Next exercise →' })
@@ -31,9 +31,9 @@ test.describe('the post-check summary (on by default)', () => {
     // Not `getByText('Today')`: the table's own `sr-only` caption also
     // contains the word ("today and over the last 7 days"), and `getByText`
     // matches case-insensitively, so that string alone resolves to two
-    // elements. The row headers are the actual, specific claim.
-    await expect(page.getByRole('rowheader', { name: 'Today' })).toBeVisible()
-    await expect(page.getByRole('rowheader', { name: 'Last 7 days' })).toBeVisible()
+    // elements. The column headers are the actual, specific claim.
+    await expect(page.getByRole('columnheader', { name: 'Today' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Last 7 days' })).toBeVisible()
     await expect(nextButton(page)).toBeVisible()
   })
 
@@ -156,12 +156,11 @@ test.describe('turning the summary off', () => {
 })
 
 test.describe('the counters', () => {
-  // A table row's own accessible name mixes in all its cells' text, which
-  // makes matching by row label unreliable — filtering by the row-header
-  // cell it actually contains, then reading its data cells by position
-  // (symbols correct, key presses, exercises completed — the column order
-  // in CompletionStats.vue), is exact instead.
-  function rowCells(page, label) {
+  // One row per counter, headed by its label, with Today's and the last 7
+  // days' totals as its two data cells in that order (CompletionStats.vue).
+  // A table row's own accessible name mixes in all its cells' text, so the
+  // row is found by the row-header cell it contains instead.
+  function counterCells(page, label) {
     return page.locator('tr').filter({ has: page.getByRole('rowheader', { name: label }) }).getByRole('cell')
   }
 
@@ -172,14 +171,81 @@ test.describe('the counters', () => {
     await clickThrough(page, SENTENCES[0])
 
     const length = String([...SENTENCES[0]].length)
-    const today = rowCells(page, 'Today')
-    await expect(today.nth(0)).toHaveText(length)
-    await expect(today.nth(1)).toHaveText(length)
-    await expect(today.nth(2)).toHaveText('1')
-
-    const last7Days = rowCells(page, 'Last 7 days')
-    await expect(last7Days.nth(0)).toHaveText(length)
-    await expect(last7Days.nth(1)).toHaveText(length)
-    await expect(last7Days.nth(2)).toHaveText('1')
+    for (const [label, expected] of [
+      ['Symbols correct', length],
+      ['Key presses', length],
+      ['Exercises completed', '1'],
+    ]) {
+      const cells = counterCells(page, label)
+      await expect(cells.nth(0)).toHaveText(expected)
+      await expect(cells.nth(1)).toHaveText(expected)
+    }
   })
+})
+
+// A phone's reserved answer box is about 330×100px, and the summary has to
+// fit it without spilling onto the keyboard below — in every interface
+// language, since the labels' lengths are what decides it. 360px is the
+// narrowest width this is promised for.
+test.describe('the summary on a phone-sized viewport', () => {
+  const box = (page) => page.locator('table').locator('xpath=ancestor::div[contains(@class, "absolute")][1]')
+
+  for (const locale of ['en', 'de', 'fr', 'hu', 'ru', 'th']) {
+    test(`fits the answer row's reserved box at 360px (${locale})`, async ({ browser }) => {
+      const context = await browser.newContext({ locale, viewport: { width: 360, height: 800 } })
+      const page = await context.newPage()
+      await mockBackend(page, [LONGEST])
+      await page.goto('/')
+
+      const sentence = await sentenceOnScreen(page)
+      const check = await page.locator('input[lang="th"] + button').boundingBox()
+      await page.locator('input[lang="th"]').fill(sentence)
+
+      const next = box(page).getByRole('button')
+      await expect(next).toBeVisible()
+      expect(await next.boundingBox()).toEqual(check)
+
+      const table = await page.locator('table').boundingBox()
+      const reserved = await box(page).boundingBox()
+      expect(table.x).toBeGreaterThanOrEqual(reserved.x)
+      expect(table.y + table.height).toBeLessThanOrEqual(reserved.y + reserved.height)
+      expect(table.x + table.width).toBeLessThanOrEqual(check.x)
+
+      await context.close()
+    })
+  }
+})
+
+test.describe('the answer-row button on a phone-sized viewport', () => {
+  test.use({ viewport: { width: 360, height: 800 } })
+
+  test('is a compact circle that leaves the field most of the row, and keeps its name', async ({ page }) => {
+    await mockBackend(page)
+    await page.goto('/')
+    await sentenceOnScreen(page)
+
+    const check = await page.getByRole('button', { name: 'Check' }).boundingBox()
+    const input = await field(page).boundingBox()
+    expect(check.width).toBeLessThanOrEqual(56)
+    expect(input.width).toBeGreaterThan(2 * check.width)
+  })
+})
+
+// Next exercise is sized to fit either label, so a long translation neither
+// overflows the pill nor makes Next a different size from Check.
+test('the Next exercise label fits its button in a long-label language', async ({ browser }) => {
+  const context = await browser.newContext({ locale: 'ru', viewport: { width: 1280, height: 720 } })
+  const page = await context.newPage()
+  await mockBackend(page)
+  await page.goto('/')
+
+  const check = await page.locator('input[lang="th"] + button').boundingBox()
+  await page.locator('input[lang="th"]').fill(await sentenceOnScreen(page))
+
+  const next = page.getByRole('button', { name: 'Следующее упражнение →' })
+  await expect(next).toBeVisible()
+  expect(await next.boundingBox()).toEqual(check)
+  expect(await next.evaluate((button) => button.scrollWidth <= button.clientWidth)).toBe(true)
+
+  await context.close()
 })

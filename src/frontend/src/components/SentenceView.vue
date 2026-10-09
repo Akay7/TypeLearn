@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import AnswerInput from './AnswerInput.vue'
 import AudioPlayer from './AudioPlayer.vue'
 import OnScreenKeyboard from './OnScreenKeyboard.vue'
+import TranslationPanel from './TranslationPanel.vue'
 import { tPlural } from '../i18n'
 import { useExerciseStore } from '../stores/exercise'
 import { useSettingsStore } from '../stores/settings'
@@ -40,6 +41,12 @@ const symbolCount = computed(() =>
       <p lang="th" class="text-5xl leading-tight font-medium">
         {{ store.current.sentence }}
       </p>
+
+      <!-- Opt-in (Settings), and nothing at all when off: what the sentence
+           means, in the interface language, with a way to rate it or offer
+           a better one. It renders nothing for an exercise already in the
+           interface language. -->
+      <TranslationPanel />
 
       <!-- The hint and the clip share a row. Neither is tall, and the whole
            exercise has to fit on a laptop screen without the learner scrolling

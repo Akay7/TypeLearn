@@ -96,6 +96,14 @@ media:
   accessModes:
     - ReadWriteMany
 
+# --- Ingestion ----------------------------------------------------------------
+# A deployment loads every sentence the filters admit, not the development
+# sample. For the Thai 25.0 release that is 21,429 exercises and as many clips,
+# about 400 MB on the media volume, and a Job that runs for minutes. The Job
+# still only runs when rendered with ingest.enabled=true; see docs/deployment.md.
+ingest:
+  count: all
+
 # --- Workloads ----------------------------------------------------------------
 backend:
   replicas: 2

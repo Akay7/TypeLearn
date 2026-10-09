@@ -35,6 +35,10 @@
     },
     "language": {
       "title": "Language"
+    },
+    "translation": {
+      "label": "Show translation",
+      "description": "The phrase in your language, beneath it"
     }
   },
   "sentence": {
@@ -79,5 +83,27 @@
   },
   "footer": {
     "source": "Source code on GitHub"
+  },
+  "translation": {
+    "loading": "Loading the translation…",
+    "unavailable": "The translation could not be loaded.",
+    "none": "No translation yet.",
+    "machine": "Machine translation",
+    "expand": "Show the whole translation",
+    "rateGood": "Good translation",
+    "rateBad": "Bad translation",
+    "suggest": "Suggest a translation",
+    "suggestBetter": "Suggest a better translation",
+    "placeholder": "Your translation",
+    "submit": "Send",
+    "cancel": "Cancel",
+    "thanks": "Thanks — it will appear after review.",
+    "errors": {
+      "BLANK": "Write a translation first.",
+      "TOO_LONG": "That translation is too long.",
+      "DUPLICATE": "That translation has already been suggested.",
+      "RATE_LIMITED": "Too many at once. Try again later.",
+      "generic": "That did not go through. Try again."
+    }
   }
 }

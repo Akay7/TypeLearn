@@ -1,7 +1,22 @@
 {{- if .Values.ingest.enabled }}
 {{- $corpus := .Values.env.CORPUS_PATH | default "/corpus" }}
+{{- /* How much to select: a positive integer, or `all`. Checked on its string
+     form so 100 and "100" are the same value, and refused here rather than in
+     a Job that starts, runs for a while, and fails. */}}
+{{- $count := toString .Values.ingest.count }}
+{{- $size := "" }}
+{{- if eq $count "all" }}
+{{- $size = "--all" }}
+{{- else if regexMatch "^[1-9][0-9]*$" $count }}
+{{- $size = printf "--count %s" $count }}
+{{- else }}
+{{- fail (printf "ingest.count must be a positive integer or \"all\", got %q" $count) }}
+{{- end }}
 # Ingestion: read a Common Voice release in place and copy the selected clips
-# into the media volume.
+# into the media volume, then load the machine translations committed with the
+# backend (exercises/fixtures/translations/) for them — so a catalog rebuilt
+# from scratch comes back translated without anything being translated again.
+# With no fixture yet, the second step says so and does nothing.
 #
 # A plain Job, deliberately not a Helm hook. A hook would run on every upgrade,
 # and this takes minutes and writes into storage every worktree reads — an
@@ -40,7 +55,7 @@ spec:
           command:
             - sh
             - -c
-            - 'python manage.py load_corpus "${CORPUS_PATH:-/corpus}"'
+            - 'python manage.py load_corpus "${CORPUS_PATH:-/corpus}" {{ $size }} && python manage.py load_translations'
           envFrom:
             {{- include "typelearn.envFrom" . | nindent 12 }}
           env:

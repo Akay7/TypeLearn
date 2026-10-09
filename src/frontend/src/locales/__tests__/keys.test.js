@@ -23,8 +23,8 @@ function flatten(catalog, prefix = '') {
 const CATALOGS = { en: enCatalog, fr: frCatalog, de: deCatalog, th: thCatalog, ru: ruCatalog, hu: huCatalog }
 
 // en.json is the reference catalog (see the comment in i18n.js). The other
-// locales are edited on Weblate, and a language is often only partly translated
-// there, so a key that is missing or blank passes: it falls back to English.
+// locales are edited by volunteers, and a language is often only partly translated,
+// so a key that is missing or blank passes: it falls back to English.
 // What does not pass is a translation that would break at runtime — a key en.json
 // no longer has, or a placeholder that does not match the English one.
 const en = flatten(enCatalog)
@@ -67,8 +67,7 @@ describe('locale catalogs', () => {
     }
   })
 
-  // A flat 'a.b' key would still resolve, but Weblate writes the keys it adds
-  // nested — so a catalog that mixed both shapes would not stay consistent.
+  // A flat 'a.b' key would still resolve, but a catalog that mixed both shapes would not stay consistent.
   for (const [locale, catalog] of Object.entries(CATALOGS)) {
     it(`${locale}.json nests its keys instead of joining them with dots`, () => {
       expect(dottedKeys(catalog)).toEqual([])

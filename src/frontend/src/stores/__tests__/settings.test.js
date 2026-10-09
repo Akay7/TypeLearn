@@ -191,6 +191,38 @@ describe('the completion-stats setting', () => {
   })
 })
 
+describe('the show-translation setting', () => {
+  it('defaults to hidden', async () => {
+    const store = await freshStore()
+    expect(store.showTranslation).toBe(false)
+  })
+
+  it('is read back by a fresh store instance', async () => {
+    const first = await freshStore()
+    first.showTranslation = true
+
+    const second = await freshStore()
+    expect(second.showTranslation).toBe(true)
+  })
+
+  it('does not crash store creation when storage throws on read', async () => {
+    window.localStorage.broken()
+
+    const store = await freshStore()
+    expect(store.showTranslation).toBe(false)
+  })
+
+  it('still applies for the session when storage throws on write', async () => {
+    const store = await freshStore()
+    window.localStorage.broken()
+
+    expect(() => {
+      store.showTranslation = true
+    }).not.toThrow()
+    expect(store.showTranslation).toBe(true)
+  })
+})
+
 describe('the interface language', () => {
   it("defaults to the browser's language when it is supported", async () => {
     vi.stubGlobal('navigator', { language: 'fr-CA' })

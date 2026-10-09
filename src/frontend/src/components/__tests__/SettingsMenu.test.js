@@ -108,3 +108,17 @@ describe('every supported locale', () => {
     })
   }
 })
+
+describe('the show-translation control', () => {
+  it('is off by default and turns the setting on', async () => {
+    const settings = useSettingsStore()
+    const wrapper = await mountOpen()
+    const control = wrapper.get('button[role="checkbox"][aria-label="Show translation"]')
+
+    expect(control.attributes('aria-checked')).toBe('false')
+
+    await control.trigger('click')
+
+    expect(settings.showTranslation).toBe(true)
+  })
+})

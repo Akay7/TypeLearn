@@ -1,11 +1,11 @@
 /**
- * What every e2e test stands on: a stubbed catalog and a stubbed clip.
+ * What every e2e test stands on: a stubbed deck and a stubbed clip.
  *
  * Nothing here talks to Django or PostgreSQL. The app's only two outbound
- * requests are the GraphQL catalog and the audio file, so intercepting both
+ * requests are the GraphQL deck and the audio file, so intercepting both
  * makes the suite hermetic — it runs on a laptop with no corpus ingested and in
  * CI with no services at all — and it makes the deck deterministic, which
- * matters because the store shuffles a real one.
+ * matters because the server draws a real one at random.
  */
 
 // Both sentences are typable from the on-screen keyboard, and `ณ` on the second
@@ -54,19 +54,67 @@ function wavClip({ seconds = 2, rate = 8000, freq = 440 } = {}) {
 const CLIP = wavClip()
 
 /**
- * Serve a catalog and a clip for the rest of the test.
+ * Serve a deck and a clip for the rest of the test.
  *
  * `sentences` decides how many exercises the deck holds. One is the way to ask
  * a question about a single exercise without the answer being disturbed by the
- * advance: the deck wraps onto itself, so what follows a correct answer is the
- * same sentence, laid out identically.
+ * advance: finishing a deck draws a new one, and every draw is answered with
+ * this same deck, so what follows a correct answer is the same sentence, laid
+ * out identically.
+ *
+ * `translations` maps an exercise's position in the deck to its translation
+ * per language (`{ 0: { en: 'Hello' } }`); an exercise it leaves out has none.
+ * Ratings and suggestions are accepted, and every GraphQL request is recorded
+ * in the returned array, so a test can ask what the app actually sent.
  */
-export async function mockBackend(page, sentences = SENTENCES) {
-  await page.route('**/graphql/', (route) =>
-    route.fulfill({
+export async function mockBackend(page, sentences = SENTENCES, { translations = {} } = {}) {
+  const requests = []
+  const translationOf = (id, language) => {
+    const text = translations[id]?.[language]
+    return text
+      ? { id: `t${id}-${language}`, text, origin: 'MACHINE', upVotes: 0, downVotes: 0 }
+      : null
+  }
+
+  await page.route('**/graphql/', (route) => {
+    const body = route.request().postDataJSON()
+    requests.push(body)
+    const { query, variables = {} } = body
+
+    if (query.includes('query Translations')) {
+      return route.fulfill({
+        json: {
+          data: {
+            exercises: variables.ids.map((id) => ({
+              id,
+              translation: translationOf(id, variables.language),
+            })),
+          },
+        },
+      })
+    }
+    if (query.includes('mutation Rate')) {
+      const [, id, language] = variables.id.match(/^t(\d+)-(\w+)$/)
+      return route.fulfill({
+        json: {
+          data: {
+            rateTranslation: {
+              ...translationOf(id, language),
+              upVotes: variables.value === 'UP' ? 1 : 0,
+              downVotes: variables.value === 'DOWN' ? 1 : 0,
+            },
+          },
+        },
+      })
+    }
+    if (query.includes('mutation Propose')) {
+      return route.fulfill({ json: { data: { proposeTranslation: { accepted: true } } } })
+    }
+
+    return route.fulfill({
       json: {
         data: {
-          exercises: sentences.map((sentence, i) => ({
+          deck: sentences.map((sentence, i) => ({
             id: String(i),
             sentence,
             audioUrl: `/media/clip-${i}.wav`,
@@ -74,12 +122,14 @@ export async function mockBackend(page, sentences = SENTENCES) {
           })),
         },
       },
-    }),
-  )
+    })
+  })
 
   await page.route('**/media/*.wav', (route) =>
     route.fulfill({ contentType: 'audio/wav', body: CLIP }),
   )
+
+  return requests
 }
 
 /**

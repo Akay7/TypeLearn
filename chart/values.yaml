@@ -116,6 +116,12 @@ env:
   # Where ingested clips live in the container; the media volume mounts here.
   MEDIA_ROOT: /app/media
   CORPUS_PATH: /corpus
+  # Every request reaches Django through the Gateway, whose Envoy appends the
+  # client's address to X-Forwarded-For — so the last entry is the one to
+  # trust, and the rate limits on ratings and suggestions count by it. Raise it
+  # by one for each further proxy that appends (a cloud load balancer in front
+  # of the Gateway); 0 would put every learner behind one shared limit.
+  TRUSTED_PROXY_COUNT: "1"
 
 # Secret values, rendered into a Secret and never into the ConfigMap. Anything
 # put here is readable by anyone who can read the release, so prefer
@@ -209,6 +215,11 @@ worktree:
 # starts one.
 ingest:
   enabled: false
+  # How much of the corpus to load: a positive integer selects that many of the
+  # best candidates, `all` selects every sentence the filters admit (about 21k
+  # for the Thai 25.0 release). Small by default, because a development cluster
+  # needs a catalog, not the catalog; a deployment asks for `all`.
+  count: 100
   # The release directory as the pod sees it. In development kind mounts the
   # host's corpus here; set corpusHostPath to mount it from the node.
   corpusHostPath: ""

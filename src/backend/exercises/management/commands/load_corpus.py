@@ -29,6 +29,9 @@ REQUIRED_MANIFEST_COLUMNS = ('path', 'up_votes', 'down_votes', 'sentence', 'sent
 
 MEDIA_SUBDIR = 'clips'
 
+# A full-corpus load runs for minutes; a log that says nothing that long looks hung.
+PROGRESS_EVERY = 1000
+
 
 def derive_difficulty(sentence_length, duration_ms):
     """Map sentence length and clip duration onto an integer 1-5 difficulty.
@@ -69,6 +72,9 @@ def select_exercises(manifest_path, durations, clips_dir, count):
     Candidates are ordered by up_votes descending, then duration ascending, then
     sentence_id ascending. sentence_id breaks every remaining tie, so the order is
     total and does not depend on the order rows appear in the manifest.
+
+    A `count` of None selects every candidate. Because the order is total, any
+    count selects a prefix of that full selection.
     """
     candidates = []
     with manifest_path.open(encoding='utf-8', newline='') as handle:
@@ -92,12 +98,35 @@ def select_exercises(manifest_path, durations, clips_dir, count):
         if len(selected) == count:
             break
 
-    if len(selected) < count:
+    if count is None and not selected:
+        raise CommandError(
+            'No candidate exercises matched the selection filters. No exercises were loaded.'
+        )
+    if count is not None and len(selected) < count:
         raise CommandError(
             f'Only {len(selected)} candidate exercises matched the selection filters, '
             f'but {count} were requested. No exercises were loaded.'
         )
     return selected
+
+
+def select_from_release(corpus_root, locale=DEFAULT_LOCALE, manifest=DEFAULT_MANIFEST,
+                        count=DEFAULT_COUNT):
+    """Select from a release directory as it is laid out on disk. Touches no
+    database, so `translate_catalog` can make the same selection on a
+    developer's machine that ingestion makes in the cluster."""
+    locale_dir = Path(corpus_root).expanduser() / locale
+    manifest_path = locale_dir / manifest
+    durations_path = locale_dir / 'clip_durations.tsv'
+    clips_dir = locale_dir / 'clips'
+
+    for path in (manifest_path, durations_path):
+        if not path.is_file():
+            raise CommandError(f'Corpus file not found: {path}')
+    if not clips_dir.is_dir():
+        raise CommandError(f'Corpus clips directory not found: {clips_dir}')
+
+    return select_exercises(manifest_path, read_durations(durations_path), clips_dir, count)
 
 
 def _require_columns(fieldnames, manifest_path):
@@ -158,9 +187,17 @@ class Command(BaseCommand):
             'corpus_root',
             help='Path to the Common Voice release directory (holds the locale subdirectory).',
         )
-        parser.add_argument(
-            '--count', type=int, default=DEFAULT_COUNT,
+        size = parser.add_mutually_exclusive_group()
+        # No default here: handle() supplies it, so it can tell a count that was
+        # asked for from one that was not when --all arrives through call_command,
+        # which does not enforce the group for keyword options.
+        size.add_argument(
+            '--count', type=int,
             help=f'How many exercises to select (default: {DEFAULT_COUNT}).',
+        )
+        size.add_argument(
+            '--all', action='store_true', dest='all',
+            help='Select every sentence that passes the filters, rather than a count.',
         )
         parser.add_argument(
             '--locale', default=DEFAULT_LOCALE,
@@ -172,25 +209,21 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        locale_dir = Path(options['corpus_root']).expanduser() / options['locale']
-        manifest_path = locale_dir / options['manifest']
-        durations_path = locale_dir / 'clip_durations.tsv'
-        clips_dir = locale_dir / 'clips'
+        if options['all'] and options['count'] is not None:
+            raise CommandError('--count and --all cannot be combined: pick a size or all.')
+        count = None if options['all'] else options['count']
+        if count is None and not options['all']:
+            count = DEFAULT_COUNT
 
-        for path in (manifest_path, durations_path):
-            if not path.is_file():
-                raise CommandError(f'Corpus file not found: {path}')
-        if not clips_dir.is_dir():
-            raise CommandError(f'Corpus clips directory not found: {clips_dir}')
-
-        durations = read_durations(durations_path)
-        selected = select_exercises(manifest_path, durations, clips_dir, options['count'])
+        selected = select_from_release(
+            options['corpus_root'], options['locale'], options['manifest'], count
+        )
 
         media_dir = Path(settings.MEDIA_ROOT) / MEDIA_SUBDIR
         media_dir.mkdir(parents=True, exist_ok=True)
 
         created = updated = copied = 0
-        for candidate in selected:
+        for done, candidate in enumerate(selected, start=1):
             if self._copy_clip(candidate['clip_path'], media_dir / candidate['clip_name']):
                 copied += 1
 
@@ -207,6 +240,8 @@ class Command(BaseCommand):
             )
             created += was_created
             updated += not was_created
+            if done % PROGRESS_EVERY == 0:
+                self.stdout.write(f'Loaded {done} of {len(selected)} exercises...')
 
         self.stdout.write(self.style.SUCCESS(
             f'Loaded {len(selected)} exercises: {created} created, {updated} already '
