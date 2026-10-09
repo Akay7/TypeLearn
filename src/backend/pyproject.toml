@@ -19,6 +19,9 @@ dependencies = [
     # are not, and are served by a web server instead. See the chart's media
     # server.
     "whitenoise>=6.12,<7.0",
+    # Reads the committed machine-translation fixture
+    # (exercises/fixtures/translations/) when `load_translations` runs.
+    "pyyaml>=6.0,<7.0",
 ]
 
 [dependency-groups]
@@ -28,6 +31,9 @@ dev = [
     # The debugger is attached to the running container, so it ships in the dev
     # image rather than being installed on a developer's host.
     "debugpy>=1.8,<2.0",
+    # Machine translation, run once by a developer with `translate_catalog`
+    # to write the translation fixture. Never needed by a deployment.
+    "anthropic>=1.0,<2.0",
 ]
 
 # This is a Django application, not a distributable library: there is no

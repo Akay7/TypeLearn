@@ -8,6 +8,7 @@ const OVERRIDE_KEY = 'typelearn.virtualKeyboardOverride'
 const KEYBOARD_KEY = 'typelearn.onScreenKeyboardVisible'
 const COMPLETION_STATS_KEY = 'typelearn.showCompletionStats'
 const LANGUAGE_KEY = 'typelearn.interfaceLanguage'
+const SHOW_TRANSLATION_KEY = 'typelearn.showTranslation'
 
 // 'auto' follows the device classification; 'on'/'off' force the virtual
 // keyboard either way, for the cases classification gets wrong in either
@@ -75,6 +76,25 @@ function saveCompletionStatsVisible(value) {
   }
 }
 
+/** Hidden by default, unlike the two above: working out what a sentence means
+ * from its sound and script is part of the practice, so the translation is
+ * something a learner asks for rather than something they have to dismiss. */
+function loadShowTranslation() {
+  try {
+    return window.localStorage.getItem(SHOW_TRANSLATION_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function saveShowTranslation(value) {
+  try {
+    window.localStorage.setItem(SHOW_TRANSLATION_KEY, String(value))
+  } catch {
+    // Storage unavailable — the choice still applies for this session.
+  }
+}
+
 /** The base subtag of a BCP-47 tag ('fr-CA' -> 'fr'), lowercased — none of
  * the six catalogs are regional variants, so a region suffix is dropped
  * rather than treated as a mismatch. */
@@ -127,6 +147,8 @@ export const useSettingsStore = defineStore('settings', () => {
   // has (verdict, then straight to the next exercise).
   const showCompletionStats = ref(loadCompletionStatsVisible())
   const interfaceLanguage = ref(loadLanguage())
+  // Whether the exercise shows its translation into the interface language.
+  const showTranslation = ref(loadShowTranslation())
 
   // Synchronous, not batched: the choice should survive a tab closed right
   // after it's made, not wait for a tick that might not come.
@@ -134,6 +156,7 @@ export const useSettingsStore = defineStore('settings', () => {
   watch(onScreenKeyboardVisible, saveKeyboardVisible, { flush: 'sync' })
   watch(showCompletionStats, saveCompletionStatsVisible, { flush: 'sync' })
   watch(interfaceLanguage, saveLanguage, { flush: 'sync' })
+  watch(showTranslation, saveShowTranslation, { flush: 'sync' })
 
   // The one place `interfaceLanguage` drives what the rest of the app reads:
   // every component keeps reading this store for every setting, rather than
@@ -162,5 +185,6 @@ export const useSettingsStore = defineStore('settings', () => {
     onScreenKeyboardVisible,
     showCompletionStats,
     interfaceLanguage,
+    showTranslation,
   }
 })

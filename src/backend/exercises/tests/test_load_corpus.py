@@ -179,3 +179,89 @@ def test_manifest_columns_cover_the_real_header():
     # Guards the fixture against drifting from the corpus the command reads.
     for column in ('path', 'sentence_id', 'sentence', 'up_votes', 'down_votes'):
         assert column in MANIFEST_COLUMNS
+
+
+def distinct_rows(n, **overrides):
+    """n valid rows with n distinct sentences; clip_row's default repeats every 10."""
+    return [clip_row(i, sentence=f'ก{i:013d}ข', **overrides) for i in range(n)]
+
+
+def test_all_loads_every_distinct_passing_sentence(build_corpus, media_root):
+    rows = distinct_rows(12) + [
+        clip_row(90, sentence='ก' * 26),  # rejected by the filters
+        clip_row(91, sentence='ก0000000000000ข', up_votes=9),  # repeats row 0's sentence
+    ]
+    corpus = build_corpus(rows)
+
+    load(corpus, count=None, all=True)
+
+    assert Exercise.objects.count() == 12
+    assert 'ก' * 26 not in Exercise.objects.values_list('sentence', flat=True)
+
+
+def test_a_count_selects_a_prefix_of_all(build_corpus, media_root):
+    corpus = build_corpus(
+        [clip_row(i, sentence=f'ก{i:013d}ข', up_votes=2 + i % 4) for i in range(12)]
+    )
+
+    load(corpus, count=None, all=True)
+    everything = list(Exercise.objects.order_by('id').values_list('sentence_id', flat=True))
+    Exercise.objects.all().delete()
+    load(corpus, count=5)
+    prefix = list(Exercise.objects.order_by('id').values_list('sentence_id', flat=True))
+
+    assert prefix == everything[:5]
+
+
+def test_count_and_all_cannot_be_combined(build_corpus, media_root):
+    corpus = build_corpus(distinct_rows(3))
+
+    # As the command line passes them, so argparse's exclusive group is exercised...
+    with pytest.raises(CommandError, match='not allowed with'):
+        call_command('load_corpus', str(corpus), '--count', '2', '--all')
+    # ...and as keywords, which call_command does not check against the group.
+    with pytest.raises(CommandError, match='cannot be combined'):
+        load(corpus, count=2, all=True)
+
+    assert Exercise.objects.count() == 0
+
+
+def test_all_with_no_candidates_fails_without_writing_rows(build_corpus, media_root):
+    corpus = build_corpus([clip_row(0, up_votes=0)])
+
+    with pytest.raises(CommandError, match='No candidate exercises'):
+        load(corpus, count=None, all=True)
+
+    assert Exercise.objects.count() == 0
+
+
+def test_all_after_a_count_grows_the_catalog_in_place(build_corpus, media_root):
+    corpus = build_corpus(distinct_rows(8))
+
+    load(corpus, count=3)
+    before = {e.sentence: e.pk for e in Exercise.objects.all()}
+    load(corpus, count=None, all=True)
+
+    assert Exercise.objects.count() == 8
+    after = {e.sentence: e.pk for e in Exercise.objects.all()}
+    assert {s: after[s] for s in before} == before
+
+
+def test_no_size_given_selects_the_default_count(build_corpus, media_root):
+    corpus = build_corpus(distinct_rows(3))
+
+    with pytest.raises(CommandError, match=r'but 100 were requested'):
+        call_command('load_corpus', str(corpus))
+
+
+def test_reports_progress_on_long_loads(build_corpus, media_root, capsys, monkeypatch):
+    monkeypatch.setattr(
+        'exercises.management.commands.load_corpus.PROGRESS_EVERY', 2
+    )
+    corpus = build_corpus(distinct_rows(5))
+
+    load(corpus, count=5)
+
+    output = capsys.readouterr().out
+    assert 'Loaded 2 of 5 exercises' in output
+    assert 'Loaded 4 of 5 exercises' in output

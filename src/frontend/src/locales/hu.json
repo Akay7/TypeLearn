@@ -79,5 +79,27 @@
   },
   "footer": {
     "source": "Forráskód a GitHubon"
+  },
+  "translation": {
+    "loading": "Fordítás betöltése…",
+    "unavailable": "A fordítást nem sikerült betölteni.",
+    "none": "Még nincs fordítás.",
+    "machine": "Gépi fordítás",
+    "expand": "A teljes fordítás megjelenítése",
+    "rateGood": "Jó fordítás",
+    "rateBad": "Rossz fordítás",
+    "suggest": "Fordítás javaslata",
+    "suggestBetter": "Jobb fordítás javaslata",
+    "placeholder": "Az ön fordítása",
+    "submit": "Küldés",
+    "cancel": "Mégse",
+    "thanks": "Köszönjük — felülvizsgálat után jelenik meg.",
+    "errors": {
+      "BLANK": "Először írjon egy fordítást.",
+      "TOO_LONG": "Ez a fordítás túl hosszú.",
+      "DUPLICATE": "Ezt a fordítást már javasolták.",
+      "RATE_LIMITED": "Túl sok kérés egyszerre. Próbálja újra később.",
+      "generic": "Nem sikerült. Próbálja újra."
+    }
   }
 }

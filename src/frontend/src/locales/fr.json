@@ -80,5 +80,27 @@
   },
   "footer": {
     "source": "Code source sur GitHub"
+  },
+  "translation": {
+    "loading": "Chargement de la traduction…",
+    "unavailable": "La traduction n’a pas pu être chargée.",
+    "none": "Pas encore de traduction.",
+    "machine": "Traduction automatique",
+    "expand": "Afficher toute la traduction",
+    "rateGood": "Bonne traduction",
+    "rateBad": "Mauvaise traduction",
+    "suggest": "Proposer une traduction",
+    "suggestBetter": "Proposer une meilleure traduction",
+    "placeholder": "Votre traduction",
+    "submit": "Envoyer",
+    "cancel": "Annuler",
+    "thanks": "Merci — elle apparaîtra après relecture.",
+    "errors": {
+      "BLANK": "Écrivez d’abord une traduction.",
+      "TOO_LONG": "Cette traduction est trop longue.",
+      "DUPLICATE": "Cette traduction a déjà été proposée.",
+      "RATE_LIMITED": "Trop de demandes à la fois. Réessayez plus tard.",
+      "generic": "Cela n’a pas fonctionné. Réessayez."
+    }
   }
 }

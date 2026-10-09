@@ -1,7 +1,6 @@
 # TypeLearn
 
 [![CI](https://github.com/Akay7/TypeLearn/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Akay7/TypeLearn/actions/workflows/ci.yml?query=branch%3Amain)
-[![Translation status](https://hosted.weblate.org/widget/typelearn/svg-badge.svg)](https://hosted.weblate.org/engage/typelearn/)
 [![License](https://img.shields.io/github/license/Akay7/TypeLearn)](LICENSE)
 [![Top language](https://img.shields.io/github/languages/top/Akay7/TypeLearn)](https://github.com/Akay7/TypeLearn)
 
@@ -37,11 +36,8 @@ Development mode, tests, debugging and running several worktrees are covered in
 
 ## Translating
 
-Help translate TypeLearn on [Hosted Weblate](https://hosted.weblate.org/engage/typelearn/).
-You don't need to open a pull request: Weblate commits your translations and opens
-it for you. Any text not translated yet shows in English.
-
-To change the English wording or add a language, see
+To fix a translation or add a language, open a pull request that edits the JSON files
+in `src/frontend/src/locales/`. Any text not translated yet shows in English. See
 [docs/translation.md](docs/translation.md).
 
 ## Audio

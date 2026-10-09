@@ -160,3 +160,58 @@ def test_oversized_document_is_rejected(client, exercises, settings):
     _, body = query(client, '{ exercises { id sentence difficulty upVotes } }')
 
     assert 'more than 5 tokens' in body['errors'][0]['message']
+
+
+@pytest.fixture
+def catalog(db):
+    """Enough rows that two random decks drawn from it practically never agree."""
+    return Exercise.objects.bulk_create(
+        Exercise(sentence=f'ประโยค {i}', original_audio=f'clips/{i}.mp3')
+        for i in range(60)
+    )
+
+
+def deck_ids(client, size):
+    response, body = query(client, f'{{ deck(size: {size}) {{ id sentence audioUrl }} }}')
+    assert response.status_code == 200
+    assert 'errors' not in body, body
+    return [item['id'] for item in body['data']['deck']]
+
+
+def test_deck_returns_the_requested_number_of_distinct_exercises(client, catalog):
+    _, body = query(client, '{ deck(size: 20) { id sentence audioUrl } }')
+
+    deck = body['data']['deck']
+    assert len(deck) == 20
+    assert len({item['id'] for item in deck}) == 20
+    assert all(item['sentence'] and item['audioUrl'].startswith('http') for item in deck)
+
+
+def test_two_decks_differ(client, catalog):
+    # Two independent 20-of-60 draws in the same order: odds far below one in 10^30.
+    assert deck_ids(client, 20) != deck_ids(client, 20)
+
+
+def test_a_deck_larger_than_the_catalog_returns_it_once(client, exercises):
+    ids = deck_ids(client, 50)
+
+    assert sorted(ids) == sorted(str(e.pk) for e in exercises)
+
+
+def test_the_deck_size_is_capped(client, catalog, settings):
+    settings.EXERCISE_DECK_MAX_SIZE = 7
+
+    assert len(deck_ids(client, 50)) == 7
+
+
+@pytest.mark.parametrize('size', [0, -3])
+def test_a_deck_size_below_one_is_an_error(client, catalog, size):
+    _, body = query(client, f'{{ deck(size: {size}) {{ id }} }}')
+
+    assert 'errors' in body
+    assert 'size' in body['errors'][0]['message']
+    assert body['data'] is None
+
+
+def test_a_deck_from_an_empty_catalog_is_empty(client, db):
+    assert deck_ids(client, 10) == []

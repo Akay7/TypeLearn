@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// A French catalog as Weblate leaves a half-done translation: some strings
+// A French catalog as a half-done translation leaves it: some strings
 // translated, one written out blank, the rest not there at all — including
 // the '_one' form of a plural whose '_other' form is translated.
 vi.mock('../locales/fr.json', () => ({

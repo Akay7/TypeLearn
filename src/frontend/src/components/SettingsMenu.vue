@@ -10,10 +10,10 @@ const { t } = useI18n()
 const open = ref(false)
 const root = ref(null)
 
-// Three independent settings, one menu. The first two are each a `field` on
+// Four independent settings, one menu. The first two are each a `field` on
 // the settings store plus a small set of named values, and share one
-// radiogroup template below instead of two near-duplicates. The third is a
-// plain boolean, so it gets its own `kind: 'checkbox'` and a single-control
+// radiogroup template below instead of two near-duplicates. The other two are
+// plain booleans, so each gets `kind: 'checkbox'` and a single-control
 // template instead of a two-option radiogroup — see design.md for why.
 // A computed, not a plain constant: `t(...)` reads the active locale
 // reactively, but an array built from it once at module load would not
@@ -74,6 +74,12 @@ const GROUPS = computed(() => [
     // above it like the radiogroup-based settings have.
     label: t('settings.completionStats.label'),
     description: t('settings.completionStats.description'),
+  },
+  {
+    field: 'showTranslation',
+    kind: 'checkbox',
+    label: t('settings.translation.label'),
+    description: t('settings.translation.description'),
   },
 ])
 

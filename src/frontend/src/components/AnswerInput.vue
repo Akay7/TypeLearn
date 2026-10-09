@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import AnswerRowButton from './AnswerRowButton.vue'
 import CompletionStats from './CompletionStats.vue'
 import { useExerciseStore } from '../stores/exercise'
 import { useSettingsStore } from '../stores/settings'
@@ -63,6 +64,7 @@ const showingSummary = computed(() => store.result === 'correct' && settings.sho
         <input
           ref="field"
           v-model="store.typed"
+          data-answer-field
           lang="th"
           type="text"
           autocomplete="off"
@@ -70,25 +72,13 @@ const showingSummary = computed(() => store.result === 'correct' && settings.sho
           spellcheck="false"
           :inputmode="settings.virtualKeyboardEnabled ? 'text' : 'none'"
           :placeholder="t('answer.placeholder')"
-          class="w-full rounded-lg border border-black/20 bg-black/5 p-3 text-2xl outline-none focus:border-indigo-500 dark:border-white/20 dark:bg-white/5"
+          class="w-full min-w-0 rounded-lg border border-black/20 bg-black/5 p-3 text-2xl outline-none focus:border-indigo-500 dark:border-white/20 dark:bg-white/5"
           @keyup.enter="store.check()"
         />
 
-        <!--
-          `w-44`, matching `CompletionStats.vue`'s Next-exercise button
-          exactly: that button is pinned to this one's own corner of the
-          reserved box once the summary shows, so the two have to agree on
-          size as well as position, or swapping between "Check" and "Next
-          exercise →" would still visibly resize the button even with its
-          position now fixed.
-        -->
-        <button
-          type="button"
-          class="w-44 shrink-0 rounded-full bg-indigo-600 px-6 py-3 text-base font-medium whitespace-nowrap text-white transition hover:bg-indigo-500"
-          @click="store.check()"
-        >
-          {{ t('answer.check') }}
-        </button>
+        <!-- Its size is shared with the summary's Next exercise button, which
+             takes over exactly this spot — see `AnswerRowButton.vue`. -->
+        <AnswerRowButton :label="t('answer.check')" glyph="✓" @click="store.check()" />
       </div>
 
       <!-- Always rendered, at a height that holds either verdict: the keyboard's

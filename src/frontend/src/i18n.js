@@ -7,15 +7,11 @@ import hu from './locales/hu.json'
 import ru from './locales/ru.json'
 import th from './locales/th.json'
 
-// The catalogs are plain JSON so Weblate (see docs/translation.md) can
-// read and write them. en.json is the reference: it holds every key, and every
+// The catalogs are plain JSON (see docs/translation.md). en.json is the reference: it holds every key, and every
 // other locale is translated from it and falls back to it. Keys are nested
 // objects grouped by the component that owns the text, and components look
 // them up by dotted path: t('settings.button.label'). Never a flat
-// 'settings.button.label' key: Weblate's i18next v4 format reads a dot as
-// nesting, so while it re-saves an existing flat key as it found it, any key
-// it adds to a translation is written nested — leaving a partly translated
-// file half one shape and half the other.
+// 'settings.button.label' key, so a file never mixes both shapes.
 //
 // A translation may be incomplete — a volunteer translates some strings of a
 // language and not the rest — and src/locales/__tests__/keys.test.js allows
@@ -26,7 +22,7 @@ import th from './locales/th.json'
 // persisted choice and the browser default; this module only owns the catalogs.
 export const SUPPORTED_LANGUAGES = ['en', 'fr', 'de', 'th', 'ru', 'hu']
 
-// Weblate can write a string nobody has translated yet as "" instead of leaving
+// A translation tool can write a string nobody has translated yet as "" instead of leaving
 // the key out, and vue-i18n renders "" as it is: a blank button. Dropping blanks,
 // at every level of nesting, makes those keys fall back to English, the same as
 // keys that are missing.
@@ -54,7 +50,7 @@ export const i18n = createI18n({
 })
 
 // A string that depends on a number, such as "{count} symbols", is stored
-// the way Weblate's i18next v4 format stores plurals: one key per CLDR plural
+// the way the i18next v4 format stores plurals: one key per CLDR plural
 // category the language has, e.g. 'sentence.symbolCount_one', '_few',
 // '_many' and '_other' for Russian, but only '_other' for Thai. vue-i18n's own
 // "a | b | c" plurals would reach translators as one raw string instead of one

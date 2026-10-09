@@ -2,24 +2,20 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { compare, dropLast, isComplete, nextExpected } from '../lib/checking'
+import { graphql } from '../lib/graphql'
 import { layoutFor, layoutsAvailable, withoutUnreachable } from '../lib/keyboard'
 import { useSettingsStore } from './settings'
 import { useStatsStore } from './stats'
 
-// A path, never a URL. The application is served from one origin in every
-// environment — behind the Gateway in the cluster and in a deployment, and
-// behind the dev server's proxy when the frontend runs on the host — so the
-// backend is always reachable at a path on the current origin. An absolute URL
-// here would be a second origin, and the backend carries no CORS configuration
-// to make one work.
-const API_URL = import.meta.env.VITE_API_URL ?? '/graphql/'
+// A random sample of the catalog, never the whole of it: a deployment holds
+// tens of thousands of exercises. Fetched up front, so advancing within a deck
+// costs nothing — the moment after a green result is the worst possible time
+// to show a loading state. The server shuffles, so the client does not.
+const DECK_SIZE = 200
 
-// The whole catalog, in one request. It is 100 rows, and fetching it up front
-// is what makes advancing to the next exercise cost nothing: the moment after a
-// green result is the worst possible time to show a loading state.
-const CATALOG_QUERY = `
-  query Catalog {
-    exercises {
+const DECK_QUERY = `
+  query Deck {
+    deck(size: ${DECK_SIZE}) {
       id
       sentence
       audioUrl
@@ -31,21 +27,30 @@ const CATALOG_QUERY = `
 // How long the verdict stays on screen before the next exercise replaces it.
 const ADVANCE_DELAY_MS = 900
 
-/** Fisher-Yates, in place: every ordering equally likely, no sort comparator abuse. */
-function shuffle(items) {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[items[i], items[j]] = [items[j], items[i]]
-  }
-  return items
+/**
+ * Fetch a deck, keeping only the exercises some keyboard can type.
+ *
+ * An exercise whose sentence holds nothing any keyboard can type is not an
+ * exercise: presented, it would be complete before the learner typed anything.
+ * Dropped here rather than hidden later, so the deck is the list of things
+ * there are to practise.
+ */
+async function fetchDeck() {
+  const data = await graphql(DECK_QUERY)
+
+  return data.deck.filter(
+    (exercise) =>
+      withoutUnreachable(exercise.sentence, layoutsAvailable(layoutFor(exercise.language))) !==
+      '',
+  )
 }
 
 export const useExerciseStore = defineStore('exercise', () => {
   const settingsStore = useSettingsStore()
   const statsStore = useStatsStore()
 
-  // The catalog in the order this session will practise it, and where we are in
-  // it. Shuffled once at load, so no exercise repeats until it wraps.
+  // The deck being practised, in the order the server drew it, and where we
+  // are in it. No exercise repeats within a deck; the next deck is a fresh draw.
   const deck = ref([])
   const index = ref(0)
   // 'loading' | 'ready' | 'error' | 'empty' — what the view renders.
@@ -128,37 +133,7 @@ export const useExerciseStore = defineStore('exercise', () => {
     status.value = 'loading'
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: CATALOG_QUERY }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`The backend responded ${response.status}`)
-      }
-
-      const body = await response.json()
-
-      // A GraphQL error arrives as HTTP 200 with an `errors` array, so checking
-      // response.ok alone would report success on a broken query.
-      if (body.errors?.length) {
-        throw new Error(body.errors[0].message)
-      }
-
-      // An exercise whose sentence holds nothing any keyboard can type is not
-      // an exercise: presented, it would be complete before the learner typed
-      // anything. Dropped here rather than hidden later, so the deck is the
-      // list of things there are to practise.
-      const practisable = body.data.exercises.filter(
-        (exercise) =>
-          withoutUnreachable(
-            exercise.sentence,
-            layoutsAvailable(layoutFor(exercise.language)),
-          ) !== '',
-      )
-
-      deck.value = shuffle(practisable)
+      deck.value = await fetchDeck()
       index.value = 0
       resetTyped()
       result.value = null
@@ -279,8 +254,47 @@ export const useExerciseStore = defineStore('exercise', () => {
     }
   }
 
+  function present(position) {
+    index.value = position
+    resetTyped()
+    result.value = null
+  }
+
+  // Held while a new deck is on its way, so a second advance in the meantime
+  // does not ask for another.
+  let refilling = false
+
   /**
-   * Present the next exercise, wrapping to the start when the deck runs out.
+   * Replace a finished deck with a fresh draw, in the background.
+   *
+   * `status` stays 'ready': the answered exercise and its verdict stay on
+   * screen until the new deck arrives, which is usually within the pause the
+   * verdict is shown for anyway. If the draw fails, or comes back with nothing
+   * to practise, the deck already held starts again rather than practice
+   * ending in an error.
+   */
+  async function refill() {
+    if (refilling) {
+      return
+    }
+    refilling = true
+
+    try {
+      const fresh = await fetchDeck()
+      if (fresh.length) {
+        deck.value = fresh
+      }
+    } catch (error) {
+      console.error('Could not load a new deck:', error)
+    } finally {
+      refilling = false
+    }
+
+    present(0)
+  }
+
+  /**
+   * Present the next exercise, drawing a new deck when this one runs out.
    * Everything belonging to the previous exercise is cleared here, so no
    * component has to remember to reset itself.
    */
@@ -291,9 +305,12 @@ export const useExerciseStore = defineStore('exercise', () => {
       return
     }
 
-    index.value = (index.value + 1) % deck.value.length
-    resetTyped()
-    result.value = null
+    if (index.value + 1 < deck.value.length) {
+      present(index.value + 1)
+      return
+    }
+
+    return refill()
   }
 
   return {

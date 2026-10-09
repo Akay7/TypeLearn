@@ -22,9 +22,14 @@ urlpatterns = [
     # no database, no template — so it reports that the process is serving and
     # never turns a slow query into a restart loop.
     path('healthz/', lambda request: HttpResponse('ok', content_type='text/plain')),
-    # csrf_exempt: the schema is read-only and unauthenticated, so the frontend
-    # can POST from the Vite origin without first fetching a CSRF cookie. This
-    # must be revisited before the first mutation is added.
+    # csrf_exempt: CSRF forges a request that rides on the victim's cookies,
+    # and nothing here reads one. The only writes are the anonymous
+    # translation mutations, which identify their caller by a `clientId`
+    # argument and a hash of the address, so a forged cross-site request can
+    # do nothing its author could not do by calling the API directly — and
+    # Strawberry refuses mutations over GET regardless. This holds only while
+    # no mutation reads the session or the logged-in user: the first one that
+    # does must come with this exemption removed and a CSRF token sent.
     path('graphql/', csrf_exempt(GraphQLView.as_view(
         schema=schema,
         graphql_ide='graphiql' if settings.DEBUG else None,

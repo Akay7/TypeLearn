@@ -89,7 +89,7 @@ test.describe('the clip plays before the learner types', () => {
     // actually finish rather than clicking while it's still playing — doing
     // that pauses it instead (see "pausing" below).
     await expect
-      .poll(() => page.evaluate(() => document.querySelector('audio').ended), { timeout: 5000 })
+      .poll(() => page.evaluate(() => document.querySelector('audio')?.ended), { timeout: 5000 })
       .toBe(true)
 
     await page.getByRole('button', { name: '▶ Play' }).click()

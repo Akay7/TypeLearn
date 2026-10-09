@@ -49,28 +49,26 @@ code to maintain for less capability.
 exercise…", ... }`) grouped by dot-prefixed component area. Flat with
 namespacing prefixes rather than nested objects: easier to grep and diff
 across six files, and vue-i18n accepts either. JSON rather than JS modules
-so the catalogs can be translated on Hosted Weblate, which reads and writes
-the files in the repository ("i18next JSON file v4" format, `en.json` as the
-monolingual base). **Alternatives considered**: one JSON file per language
+so translators can edit them without touching code (i18next JSON v4 layout,
+`en.json` as the base). **Alternatives considered**: one JSON file per language
 per component — rejected as more files than six languages' worth of strings
-warrant; `.js` modules — rejected once the catalogs moved to Weblate, which
-cannot parse them.
+warrant; `.js` modules — rejected once the catalogs became data
+rather than code.
 
 ### Count-dependent strings use CLDR plural keys, not vue-i18n's pipe syntax
 Languages differ in how many plural forms they have: Russian has three for
 whole numbers ("1 символ", "2 символа", "5 символов"), and Thai has none. Such
 strings are stored as one key per CLDR category (`sentence.symbolCount_one`,
-`_few`, `_many`, `_other`), the layout Weblate's i18next v4 format shows as
-one plural field per form. A small `tPlural(key, count)` helper in `i18n.js`
+`_few`, `_many`, `_other`), the i18next v4 layout, one key per form. A small `tPlural(key, count)` helper in `i18n.js`
 picks the key with `Intl.PluralRules` for the active locale. If that form is
 not translated, it uses the locale's `_other` form, then English.
 **Alternative considered**: vue-i18n's `"a | b | c"` plurals with custom
-`pluralRules`. Rejected because Weblate would show translators one raw string
+`pluralRules`. Rejected because translators would see one raw string
 full of pipes, with no hint of which form goes where.
 
 ### Partial translations fall back to English
-Volunteers on Weblate often translate part of a language. A key a locale
-lacks, or holds as an empty string (how Weblate can write an untranslated
+Volunteers often translate part of a language. A key a locale
+lacks, or holds as an empty string (how a translation tool can write an untranslated
 string), falls back to `en.json`: `i18n.js` drops empty strings before handing
 the catalogs to vue-i18n, since vue-i18n would otherwise render them blank.
 The catalog test therefore requires `en.json` to be complete, and for the
@@ -119,8 +117,7 @@ radio-button rendering built for two or three short options.
 ## Risks / Trade-offs
 
 - **Catalogs can drift out of sync as new strings are added**
-  → a new key only has to land in `en.json`; Weblate then offers it to
-  translators, and until they translate it every other locale shows English.
+  → a new key only has to land in `en.json`; translators add it later, and until they translate it every other locale shows English.
   A test rejects keys in another locale that `en.json` no longer has, and
   placeholders that differ from the English string.
 - **Translation quality**: these catalogs are written without native-speaker

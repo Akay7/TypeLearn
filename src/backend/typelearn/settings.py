@@ -187,3 +187,33 @@ MAILERS = {
 STRAWBERRY_MAX_TOKENS = int(os.environ.get('STRAWBERRY_MAX_TOKENS', 1000))
 STRAWBERRY_MAX_ALIASES = int(os.environ.get('STRAWBERRY_MAX_ALIASES', 10))
 STRAWBERRY_MAX_QUERY_DEPTH = int(os.environ.get('STRAWBERRY_MAX_QUERY_DEPTH', 10))
+
+# The most exercises one `deck` query returns. A deck is a sample for practice,
+# not a way to page through the catalog, so a client asking for more gets this.
+EXERCISE_DECK_MAX_SIZE = int(os.environ.get('EXERCISE_DECK_MAX_SIZE', 500))
+
+
+# Phrase translations
+# The languages a translation may be requested in or suggested for: the
+# frontend's interface languages (src/frontend/src/i18n.js), mirrored here
+# because the API validates `language` arguments against them.
+SUPPORTED_INTERFACE_LANGUAGES = [
+    language
+    for language in os.environ.get('SUPPORTED_INTERFACE_LANGUAGES', 'en,fr,de,th,ru,hu').split(',')
+    if language
+]
+# The language the catalog's sentences are in. A setting until exercises carry
+# a language of their own; never translated into itself.
+TRANSLATION_SOURCE_LANGUAGE = os.environ.get('TRANSLATION_SOURCE_LANGUAGE', 'th')
+# The longest translation stored, machine or learner. Matches the column.
+TRANSLATION_MAX_LENGTH = int(os.environ.get('TRANSLATION_MAX_LENGTH', 500))
+# Anonymous writes, counted per browser id and per client address over the
+# last hour. Counted from the rows themselves, so the limit holds across
+# workers and pods without a shared cache.
+TRANSLATION_PROPOSALS_PER_HOUR = int(os.environ.get('TRANSLATION_PROPOSALS_PER_HOUR', 20))
+TRANSLATION_RATINGS_PER_HOUR = int(os.environ.get('TRANSLATION_RATINGS_PER_HOUR', 300))
+# How many proxies in front of Django append to X-Forwarded-For. 0 trusts no
+# header and uses the connection's address; behind the Gateway it is 1. Too
+# high, and a client can forge its address; too low, and every request looks
+# like it comes from the proxy and they all share one rate limit.
+TRUSTED_PROXY_COUNT = int(os.environ.get('TRUSTED_PROXY_COUNT', 0))
