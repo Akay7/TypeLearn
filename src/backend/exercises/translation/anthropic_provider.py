@@ -11,29 +11,16 @@ import os
 
 import anthropic
 
-from .providers import Provider, ProviderConfigurationError, ProviderError, validated
+from .providers import (
+    SYSTEM_PROMPT,
+    Provider,
+    ProviderConfigurationError,
+    ProviderError,
+    language_name,
+    validated,
+)
 
 DEFAULT_MODEL = 'claude-opus-5'
-
-# English names, for the prompt: the model is told "Thai", not "th".
-LANGUAGE_NAMES = {
-    'en': 'English',
-    'fr': 'French',
-    'de': 'German',
-    'th': 'Thai',
-    'ru': 'Russian',
-    'hu': 'Hungarian',
-}
-
-SYSTEM_PROMPT = """\
-You translate sentences for a language-learning app. Each sentence comes from a \
-crowd-sourced speech corpus, so it stands alone with no surrounding context: a \
-learner hears it, types it, and reads your translation to understand what it means.
-
-Translate each sentence faithfully and naturally. Keep the meaning, register and \
-tone of the original; do not add explanations, transliterations, notes or \
-alternatives. When a sentence is ambiguous out of context, pick the most likely \
-everyday reading. Return exactly one translation per input sentence, in the same order."""
 
 OUTPUT_FORMAT = {
     'type': 'json_schema',
@@ -55,10 +42,6 @@ MAX_TOKENS = 16000
 # exported in the shell that runs `translate_catalog`. Nothing in the repository
 # or the chart ever holds one.
 CREDENTIAL_VARIABLES = ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_PROFILE')
-
-
-def language_name(code: str) -> str:
-    return LANGUAGE_NAMES.get(code, code)
 
 
 class AnthropicProvider(Provider):

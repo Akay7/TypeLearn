@@ -16,6 +16,31 @@ class ProviderConfigurationError(Exception):
     """The provider cannot run at all — raised before any work starts."""
 
 
+# English names, for the prompt: the model is told "Thai", not "th".
+LANGUAGE_NAMES = {
+    'en': 'English',
+    'fr': 'French',
+    'de': 'German',
+    'th': 'Thai',
+    'ru': 'Russian',
+    'hu': 'Hungarian',
+}
+
+SYSTEM_PROMPT = """\
+You translate sentences for a language-learning app. Each sentence comes from a \
+crowd-sourced speech corpus, so it stands alone with no surrounding context: a \
+learner hears it, types it, and reads your translation to understand what it means.
+
+Translate each sentence faithfully and naturally. Keep the meaning, register and \
+tone of the original; do not add explanations, transliterations, notes or \
+alternatives. When a sentence is ambiguous out of context, pick the most likely \
+everyday reading. Return exactly one translation per input sentence, in the same order."""
+
+
+def language_name(code: str) -> str:
+    return LANGUAGE_NAMES.get(code, code)
+
+
 class Provider:
     name = ''
     model = ''
@@ -60,7 +85,7 @@ def validated(result, sentences: list[str]) -> list[str]:
 
 
 def get_provider(name: str, model: str = '', effort: str = '',
-                 refusal_fallback: bool = True) -> Provider:
+                 refusal_fallback: bool = True, base_url: str = '') -> Provider:
     if name == 'offline':
         return OfflineProvider()
     if name == 'anthropic':
@@ -74,4 +99,8 @@ def get_provider(name: str, model: str = '', effort: str = '',
             ) from error
 
         return AnthropicProvider(model, effort, refusal_fallback)
+    if name == 'openai-compatible':
+        from .openai_provider import OpenAICompatibleProvider
+
+        return OpenAICompatibleProvider(model, base_url)
     raise ProviderConfigurationError(f'Unknown translation provider {name!r}.')

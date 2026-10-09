@@ -59,9 +59,14 @@ class Command(BaseCommand):
             help='Comma-separated targets. Default: every interface language except the source.',
         )
         parser.add_argument(
-            '--provider', default='anthropic', help='anthropic or offline. Default: anthropic.'
+            '--provider', default='anthropic', help='anthropic, openai-compatible (a local server) or offline. Default: anthropic.'
         )
         parser.add_argument('--model', default='', help="Default: the provider's own.")
+        parser.add_argument(
+            '--base-url', default='',
+            help='For openai-compatible: the server API root. '
+                 'Default: http://localhost:8000/api/v1 (Lemonade).',
+        )
         parser.add_argument(
             '--effort', default='',
             help="The model's effort level (low, medium, high, xhigh, max). "
@@ -103,7 +108,7 @@ class Command(BaseCommand):
 
         try:
             provider = get_provider(options['provider'], options['model'], options['effort'],
-                                    options['refusal_fallback'])
+                                    options['refusal_fallback'], options['base_url'])
         except ProviderConfigurationError as error:
             raise CommandError(str(error)) from error
 

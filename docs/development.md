@@ -155,6 +155,17 @@ keeps everything that was saved: the file is written every 30 seconds and on
 exit. `--model` and `--effort` trade quality for cost, and `--languages en,ru`
 narrows the targets. Review the diff and commit the file.
 
+To use a local OpenAI-compatible server instead, such as Lemonade, start it and
+pass the model name it lists. No key is needed:
+
+```bash
+uv run python manage.py translate_catalog "$TYPELEARN_CORPUS_DIR" \
+  --provider openai-compatible --model <model name> --batch-size 10 --limit 20
+```
+
+`--base-url` defaults to Lemonade's `http://localhost:8000/api/v1`. Local models
+are less reliable than Claude, so keep the batches small and read the trial run.
+
 To fix a bad translation, edit its line and commit. Loading replaces the text
 and clears that translation's ratings, because they were cast on different
 words. To try the command out without a key, use `--provider offline --dir
