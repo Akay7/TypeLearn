@@ -55,6 +55,9 @@ class OpenAICompatibleProvider(Provider):
         body = {
             'model': self.model,
             'temperature': 0,
+            # Reasoning models spend minutes thinking about a short sentence; a
+            # translation does not need it. Servers that don't know it ignore it.
+            'chat_template_kwargs': {'enable_thinking': False},
             'messages': [
                 {'role': 'system', 'content': f'{SYSTEM_PROMPT}\n\n{JSON_INSTRUCTION}'},
                 {'role': 'user', 'content': (
