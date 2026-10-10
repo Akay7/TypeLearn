@@ -77,6 +77,20 @@ class OpenAICompatibleProvider(Provider):
 
     def translate(self, sentences, source, target):
         try:
+            return self.translate_batch(sentences, source, target)
+        except ProviderError:
+            # A small model sometimes breaks the JSON on one awkward sentence.
+            # At temperature 0 a retry would repeat it, so halve the batch: the
+            # good half is kept, and the bad sentence ends up alone, where it
+            # fails by itself instead of taking 24 others with it.
+            if len(sentences) == 1:
+                raise
+            middle = len(sentences) // 2
+            return (self.translate(sentences[:middle], source, target)
+                    + self.translate(sentences[middle:], source, target))
+
+    def translate_batch(self, sentences, source, target):
+        try:
             response = self.request(sentences, source, target)
         except urllib.error.HTTPError as error:
             if error.code in (401, 403, 404):
