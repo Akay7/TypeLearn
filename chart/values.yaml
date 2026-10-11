@@ -145,6 +145,12 @@ postgres:
   image: ghcr.io/cloudnative-pg/postgresql:17
   database: typelearn
   owner: typelearn
+  # Collation/ctype for the initial database, e.g. en_US.UTF-8. Empty keeps
+  # CNPG's default (C). Only read at bootstrap; it cannot be changed in place.
+  locale: {}
+  #  encoding: UTF8
+  #  collate: en_US.UTF-8
+  #  ctype: en_US.UTF-8
   storage:
     size: 1Gi
     # Empty uses the cluster's default StorageClass.
