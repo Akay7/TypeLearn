@@ -35,6 +35,17 @@ spec:
     initdb:
       database: {{ .Values.postgres.database }}
       owner: {{ .Values.postgres.owner }}
+      {{- with .Values.postgres.locale }}
+      # initdb-only: collation and ctype are fixed when the database is created.
+      # Changing them on a running cluster means a new cluster and a restore.
+      encoding: {{ .encoding | default "UTF8" }}
+      {{- with .collate }}
+      localeCollate: {{ . }}
+      {{- end }}
+      {{- with .ctype }}
+      localeCType: {{ . }}
+      {{- end }}
+      {{- end }}
   {{- if .Values.postgres.allowCreateDatabase }}
   # Development only. pytest-django creates and drops its own test database on
   # every run, which the bootstrap owner role cannot do by default. CNPG
