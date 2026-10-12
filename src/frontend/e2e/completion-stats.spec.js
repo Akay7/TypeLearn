@@ -242,7 +242,7 @@ test('the Next exercise label fits its button in a long-label language', async (
   const check = await page.locator('input[lang="th"] + button').boundingBox()
   await page.locator('input[lang="th"]').fill(await sentenceOnScreen(page))
 
-  const next = page.getByRole('button', { name: 'Следующее упражнение →' })
+  const next = page.getByRole('button', { name: 'Дальше →' })
   await expect(next).toBeVisible()
   expect(await next.boundingBox()).toEqual(check)
   expect(await next.evaluate((button) => button.scrollWidth <= button.clientWidth)).toBe(true)
