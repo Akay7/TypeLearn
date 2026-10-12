@@ -113,6 +113,18 @@ env:
   # Extended automatically with gateway.host when that is set, so the common
   # case needs nothing here.
   DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+  # Secure by default: Django is told every request reached it over HTTPS (the
+  # Gateway's TLS, or a proxy upstream of it), so the session and CSRF cookies
+  # are marked Secure, and with gateway.host set that host's https:// origin is
+  # added to CSRF_TRUSTED_ORIGINS — without which every POST, the admin login
+  # included, is a 403 behind a TLS-terminating proxy.
+  #
+  # A cluster with no certificate — development's kind cluster at
+  # http://localhost — has to say so: set "false", and cookies are sent over
+  # plain HTTP again. The Tiltfile does exactly that, so no one running it edits
+  # anything. A deployment terminating TLS upstream of the Gateway keeps "true"
+  # and has no gateway.tls.secretName to set.
+  DJANGO_BEHIND_HTTPS_PROXY: "true"
   # Where ingested clips live in the container; the media volume mounts here.
   MEDIA_ROOT: /app/media
   CORPUS_PATH: /corpus

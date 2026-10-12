@@ -68,6 +68,44 @@ env:
   ANY_NEW_SETTING: "value"
 ```
 
+#### HTTPS
+
+The chart is secure by default, and "secure" here means it assumes clients
+reach it over HTTPS. That is not something Django can see for itself: the
+Gateway terminates TLS and forwards plain HTTP, so a browser's
+`Origin: https://<host>` never matches the request's own scheme and every POST —
+the admin login included — fails CSRF with a 403. `DJANGO_BEHIND_HTTPS_PROXY`
+defaults to `"true"`, and with it:
+
+| Setting | Becomes | Why |
+| --- | --- | --- |
+| `SECURE_PROXY_SSL_HEADER` | trusts the Gateway's `X-Forwarded-Proto` | a request is known to be HTTPS |
+| session and CSRF cookies | marked `Secure` | a browser never sends them over plain HTTP |
+| `CSRF_TRUSTED_ORIGINS` | `https://<gateway.host>`, appended to anything you list | the origin the browser sends |
+
+Name a certificate with `gateway.tls.secretName` and the Gateway gains an HTTPS
+listener for it; terminate TLS upstream of the Gateway instead and there is
+nothing to name, and the defaults still apply.
+
+**A cluster with no certificate** — development's kind cluster, or any trial on
+plain HTTP — has to say so, because `Secure` cookies are not sent back over
+`http://` and signing in would silently fail:
+
+```yaml
+env:
+  DJANGO_BEHIND_HTTPS_PROXY: "false"
+```
+
+`tilt up` sets this itself; see [development.md](development.md). Treat it as
+the one switch that makes a cluster not a deployment, and leave it out of
+anything that is one.
+
+The Gateway also keeps its port-80 listener, and the same fails-closed rule
+applies there: a page opened over it still loads, but signing in does not, so
+send visitors to the `https://` address.
+
+#### Secrets
+
 Secrets are a different map, and which one you use matters:
 
 | | Use it when | What it does |

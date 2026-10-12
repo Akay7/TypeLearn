@@ -18,6 +18,24 @@
   {{- if not (has .Values.gateway.host $hosts) }}
     {{- $_ := set $env "DJANGO_ALLOWED_HOSTS" (append (compact $hosts) .Values.gateway.host | join ",") }}
   {{- end }}
+  {{- if eq (toString (get $env "DJANGO_BEHIND_HTTPS_PROXY") | lower) "true" }}
+    {{/*
+      Secure mode, which is the default: the public origin is https. Django
+      cannot always see that for itself — Envoy forwards plain HTTP to it, and
+      a TLS-terminating proxy upstream of Envoy may not survive as
+      X-Forwarded-Proto — so a browser's `Origin: https://host` is trusted by
+      name or every POST, the admin login included, is a 403.
+
+      Appended and de-duplicated like the host above, so an explicit list keeps
+      whatever else it names. Skipped in the plain-HTTP mode a local cluster
+      opts into: Django derives http://host from the request and agrees.
+    */}}
+    {{- $origin := printf "https://%s" .Values.gateway.host }}
+    {{- $origins := splitList "," (default "" (get $env "CSRF_TRUSTED_ORIGINS")) }}
+    {{- if not (has $origin $origins) }}
+      {{- $_ := set $env "CSRF_TRUSTED_ORIGINS" (append (compact $origins) $origin | join ",") }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 apiVersion: v1
 kind: ConfigMap

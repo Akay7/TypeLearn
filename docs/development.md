@@ -347,6 +347,15 @@ same database, same chart. A deployment differs from development in its values,
 so these differ in their values too — otherwise the default would be a second
 arrangement rather than the one that ships. `tilt up` prints which mode it is in.
 
+One value differs from a deployment in *both* modes: `DJANGO_BEHIND_HTTPS_PROXY`.
+The chart defaults it to `"true"` — cookies `Secure`, requests assumed HTTPS —
+and the cluster Tilt builds is `http://localhost` with no certificate, where a
+`Secure` cookie is never sent back and the admin login would silently fail. The
+Tiltfile sets it to `"false"` after reading `.env`, so there is nothing to edit
+and a line in `.env` cannot turn it back on. Installing the chart on a cluster
+without Tilt, by hand, needs `--set-string env.DJANGO_BEHIND_HTTPS_PROXY=false`
+for the same reason.
+
 The host list narrows rather than only `DJANGO_DEBUG` flipping, because a
 wildcard hides the misconfiguration the default exists to catch. `.env` keeps
 saying `DJANGO_DEBUG=true` — it is a development file, also read by management

@@ -38,6 +38,25 @@ ALLOWED_HOSTS = [
     if host
 ]
 
+# Behind a TLS-terminating Gateway Django sees plain HTTP, so a browser's
+# `Origin: https://host` never matches the request's own scheme and every POST
+# (the admin login included) fails CSRF. List the public origins, scheme
+# included: "https://typelearn.app".
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+
+# Set when every request arrives through a proxy that sets X-Forwarded-Proto
+# (the Gateway's Envoy does): Django then knows the request was HTTPS and marks
+# the session and CSRF cookies Secure. Off by default, so a plain-HTTP
+# localhost cluster keeps working.
+if os.environ.get('DJANGO_BEHIND_HTTPS_PROXY', 'false').lower() == 'true':
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 
 # Application definition
 

@@ -62,7 +62,8 @@ jobs:
           helm template typelearn chart $API --namespace typelearn-ci \
             --set frontend.mode=dev --set frontend.hmrClientPort=8500 \
             --set media.hostPath=/media --set worktree.slug=ci \
-            --set postgres.allowCreateDatabase=true > /dev/null
+            --set postgres.allowCreateDatabase=true \
+            --set-string env.DJANGO_BEHIND_HTTPS_PROXY=false > /dev/null
           echo "media served from outside the chart"
           helm template typelearn chart $API --set media.server.enabled=false > /dev/null
           echo "an external database"
@@ -72,6 +73,34 @@ jobs:
           echo "ingestion"
           helm template typelearn chart $API \
             --set ingest.enabled=true --set ingest.corpusHostPath=/corpus > /dev/null
+      # The chart is secure by default: Django is told requests arrive over
+      # HTTPS, which marks cookies Secure and trusts the https origin. Nothing in
+      # a plain-HTTP cluster exercises that, and its failure is a 403 on the
+      # first deployment's admin login — so it is asserted here, along with the
+      # opt-out development relies on.
+      - name: HTTPS is the default and plain HTTP is a choice
+        env:
+          API: --api-versions gateway.networking.k8s.io/v1 --api-versions postgresql.cnpg.io/v1
+        run: |
+          set -e
+          cm=$(helm template typelearn chart $API --values chart/values-prod.yaml.example \
+            --show-only templates/configmap.yaml)
+          echo "$cm" | grep -q 'DJANGO_BEHIND_HTTPS_PROXY: "true"' \
+            || { echo "FAIL: a deployment is not secure by default"; exit 1; }
+          echo "$cm" | grep -q 'CSRF_TRUSTED_ORIGINS: "https://typelearn.example.com"' \
+            || { echo "FAIL: the https origin was not trusted"; exit 1; }
+          echo "secure with nothing supplied at all"
+          helm template typelearn chart $API --show-only templates/configmap.yaml \
+            | grep -q 'DJANGO_BEHIND_HTTPS_PROXY: "true"' \
+            || { echo "FAIL: the bare defaults are not secure"; exit 1; }
+          echo "the local opt-out, as Tilt sets it, must turn both off"
+          cm=$(helm template typelearn chart $API --values chart/values-prod.yaml.example \
+            --set-string env.DJANGO_BEHIND_HTTPS_PROXY=false \
+            --show-only templates/configmap.yaml)
+          echo "$cm" | grep -q 'DJANGO_BEHIND_HTTPS_PROXY: "false"' \
+            || { echo "FAIL: the opt-out was not honoured"; exit 1; }
+          echo "$cm" | grep -q 'CSRF_TRUSTED_ORIGINS' \
+            && { echo "FAIL: an https origin was trusted in plain-HTTP mode"; exit 1; } || true
       # The requirement is "secrets are not configuration". Asserted here rather
       # than trusted, because the failure is silent: a secret in a ConfigMap
       # works perfectly and is readable by anyone who can read the namespace.
