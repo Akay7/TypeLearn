@@ -36,7 +36,10 @@ gateway:
 # --- Configuration ------------------------------------------------------------
 # Any backend environment variable can be set here; these override the chart's
 # defaults. gateway.host is added to DJANGO_ALLOWED_HOSTS automatically, so it
-# does not need restating.
+# does not need restating — and so is its https:// origin in CSRF_TRUSTED_ORIGINS,
+# because DJANGO_BEHIND_HTTPS_PROXY defaults to "true": cookies are Secure and
+# Django trusts that requests arrived over HTTPS. Nothing here turns that off;
+# only a cluster with no certificate does.
 env:
   DJANGO_DEBUG: "false"
 

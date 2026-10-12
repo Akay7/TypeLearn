@@ -342,6 +342,13 @@ if not DEV_MODE:
     ENV["DJANGO_DEBUG"] = "false"
     ENV["DJANGO_ALLOWED_HOSTS"] = "localhost,127.0.0.1"
 
+# The chart is secure by default: it tells Django every request arrived over
+# HTTPS, so cookies are marked Secure and a browser would not send them back over
+# http://localhost. This cluster has no certificate, in either mode, so the one
+# thing that always differs from a deployment is that it says so. Set after .env
+# is read, so a stale line there cannot put the secure default back.
+ENV["DJANGO_BEHIND_HTTPS_PROXY"] = "false"
+
 # --- The stack ----------------------------------------------------------------
 # One chart, rendered here with development values and by a deployment with its
 # own. The templates a developer exercises every day are the templates a
