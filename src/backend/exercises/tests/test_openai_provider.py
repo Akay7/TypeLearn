@@ -38,7 +38,7 @@ def test_accepts_a_reply_in_a_code_fence(provider):
 
 @pytest.mark.parametrize('answer', [
     reply('not json'),
-    reply(json.dumps({'translations': ['only one']})),
+    reply(json.dumps({'translations': ['one', 'two', 'three']})),
     reply(json.dumps({'translations': ['ok', ' ']})),
     reply('{"translations": ["a", "b"]}', finish_reason='length'),
     {'choices': []},
@@ -68,3 +68,22 @@ def test_needs_a_model():
 def test_base_url_defaults_to_lemonade_and_drops_a_trailing_slash():
     assert get_provider('openai-compatible', 'm').base_url == 'http://localhost:8000/api/v1'
     assert get_provider('openai-compatible', 'm', base_url='http://h:1/v1/').base_url == 'http://h:1/v1'
+
+
+def test_a_broken_batch_is_split_until_the_bad_sentence_stands_alone(monkeypatch):
+    provider = OpenAICompatibleProvider('m')
+
+    def request(sentences, source, target):
+        if 'bad' in sentences and len(sentences) > 1:
+            return reply('{"translations": ["unterminated')
+        return reply(json.dumps({'translations': [s.upper() for s in sentences]}))
+
+    monkeypatch.setattr(provider, 'request', request)
+    assert provider.translate(['a', 'b', 'bad', 'c'], 'th', 'en') == ['A', 'B', 'BAD', 'C']
+
+
+def test_a_sentence_that_fails_alone_fails_the_batch(monkeypatch):
+    provider = OpenAICompatibleProvider('m')
+    monkeypatch.setattr(provider, 'request', lambda *args: reply('nope'))
+    with pytest.raises(ProviderError):
+        provider.translate(['a', 'b'], 'th', 'en')

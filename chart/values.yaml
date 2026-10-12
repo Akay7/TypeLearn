@@ -223,7 +223,7 @@ ingest:
   enabled: false
   # How much of the corpus to load: a positive integer selects that many of the
   # best candidates, `all` selects every sentence the filters admit (about 21k
-  # for the Thai 25.0 release). Small by default, because a development cluster
+  # for the Thai 27.0 release). Small by default, because a development cluster
   # needs a catalog, not the catalog; a deployment asks for `all`.
   count: 100
   # The release directory as the pod sees it. In development kind mounts the

@@ -24,8 +24,8 @@ context: |
     configuration at all. Keep it that way.
 
   Corpus:
-  - Mozilla Common Voice Thai 25.0, on disk in the release directory
-    cv-corpus-25.0-2026-03-09/th — outside the repository, read in place,
+  - Mozilla Common Voice Thai 27.0, on disk in the release directory
+    cv-corpus-27.0-2026-09-11/th — outside the repository, read in place,
     never committed. Its path is a parameter, never hardcoded.
   - Select exercises from validated.tsv (has path + up_votes). Never from
     validated_sentences.tsv, which has neither.

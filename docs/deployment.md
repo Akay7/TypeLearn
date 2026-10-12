@@ -106,14 +106,14 @@ onto the media volume. The corpus has to be on a node, mounted from
 `ingest.count` decides how much of it is loaded. A positive integer selects that
 many of the best candidates, and `all` selects every sentence the quality and
 beginner filters admit. The chart default is `100`, a development-sized sample;
-`values-prod.yaml.example` sets `all`. For the Thai 25.0 release, `all` is 21,429
+`values-prod.yaml.example` sets `all`. For the Thai 27.0 release, `all` is 21,442
 exercises and about 400 MB of clips, and the Job runs for minutes, logging its
 progress every thousand exercises. Any other value fails at render time.
 
 ```bash
 kubectl delete job ingest -n typelearn --ignore-not-found
 helm template typelearn ./chart --namespace typelearn --values my-values.yaml \
-  --set ingest.enabled=true --set ingest.corpusHostPath=/srv/cv-corpus-25.0-2026-03-09 \
+  --set ingest.enabled=true --set ingest.corpusHostPath=/srv/cv-corpus-27.0-2026-09-11 \
   --show-only templates/ingest-job.yaml | kubectl apply -n typelearn -f -
 kubectl logs -n typelearn -f job/ingest
 ```

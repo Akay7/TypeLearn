@@ -100,9 +100,9 @@ Tailwind 3 and its `init -p` command was removed in v4.
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Corpus source | Mozilla Common Voice | CC-0 license, 150+ languages, Thai release 25.0 |
-| Corpus location | Release directory `cv-corpus-25.0-2026-03-09/th`, path supplied to the ingestion script | 9.6 GB, **outside the repository**, read in place and never committed |
-| Selection source | `validated.tsv` | 148,765 rows; the only manifest carrying both a clip `path` and vote counts |
+| Corpus source | Mozilla Common Voice | CC-0 license, 150+ languages, Thai release 27.0 |
+| Corpus location | Release directory `cv-corpus-27.0-2026-09-11/th`, path supplied to the ingestion script | 9.7 GB, **outside the repository**, read in place and never committed |
+| Selection source | `validated.tsv` | 148,823 rows; the only manifest carrying both a clip `path` and vote counts |
 | Clip durations | `clip_durations.tsv` | 366,508 rows mapping clip filename → duration in ms |
 | Audio | `clips/*.mp3` | 366,508 files; only the ~100 selected clips are copied into `MEDIA_ROOT` |
 | MVP dataset | JSON file | `data/processed/mvp_dataset.json`, produced by the ingestion script |
@@ -206,7 +206,7 @@ TypeLearn/
 ```
 
 The Common Voice corpus is **not** part of this tree. It lives outside the
-repository in the release directory `cv-corpus-25.0-2026-03-09/`, is
+repository in the release directory `cv-corpus-27.0-2026-09-11/`, is
 read in place by the ingestion script, and only the selected clips are copied into
 `data/media/`. The corpus path is a parameter of the ingestion script, not a
 hardcoded constant.

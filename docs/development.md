@@ -90,11 +90,11 @@ bootstrap.
 ### 3. Load exercises
 
 Ingestion needs a local Common Voice release directory
-(`cv-corpus-25.0-2026-03-09` for Thai). It stays outside the repository and is
+(`cv-corpus-27.0-2026-09-11` for Thai). It stays outside the repository and is
 never committed — point the cluster at it before creating the cluster:
 
 ```bash
-export TYPELEARN_CORPUS_DIR=/path/to/cv-corpus-25.0-2026-03-09
+export TYPELEARN_CORPUS_DIR=/path/to/cv-corpus-27.0-2026-09-11
 ```
 
 Then press **Ingest the corpus** in the Tilt UI. It selects 100 exercises from
