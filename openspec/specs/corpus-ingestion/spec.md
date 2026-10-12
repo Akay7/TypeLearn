@@ -38,7 +38,7 @@ later rows for an already-selected sentence are skipped. A count selects a prefi
 of the "all" selection.
 
 #### Scenario: Selecting the MVP subset
-- **WHEN** the ingestion script runs against the Thai corpus at the supplied corpus root (release directory `cv-corpus-25.0-2026-03-09`) with no selection size given
+- **WHEN** the ingestion script runs against the Thai corpus at the supplied corpus root (release directory `cv-corpus-27.0-2026-09-11`) with no selection size given
 - **THEN** it emits exactly 100 exercises, each with a unique `sentence`, drawn from the candidate pool matching the filters above
 
 #### Scenario: Selecting an explicit count

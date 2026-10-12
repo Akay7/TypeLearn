@@ -150008,3 +150008,94 @@ sentences:
   de: Ich werde zwei Gesichter vor dir verbergen
   fr: Je demande la permission de partir, laissant derrière moi mon visage et mes traits.
   hu: Kérek egy búcsút a következő két életemre, a homlokodra.
+- sentence: หวังว่ารุ่นนี้จะแรงมาก
+  sentence_id: 00d95dfd40936ef3f8053bac0d13aea83f6c129c02e9a17f78a6503a0200de1e
+  en: I hope this model will be really powerful.
+  ru: Надеюсь, эта модель будет очень мощной.
+  de: Ich hoffe, dieses Modell wird richtig leistungsstark.
+  fr: J'espère que ce modèle sera très puissant.
+  hu: Remélem, ez a modell nagyon erős lesz.
+- sentence: นี่ครับพี่
+  sentence_id: 00ccc061bc9193d160a5e0d0dddd6c0e05cbeefedc89aae1f84f183fd4b8997a
+  en: Here you go, bro.
+  ru: Вот, держи, брат.
+  de: Hier, bitte, Bruder.
+  fr: Tiens, mon frère.
+  hu: Tessék, tesó.
+- sentence: กำไลสายชาร์จก็มา
+  sentence_id: 016c813d861401409fbf47df6d04036ec871e488b18c8f51e4c972e666f7609f
+  en: The charging-cable bracelet came too.
+  ru: Браслет-кабель для зарядки тоже пришёл.
+  de: Das Armband-Ladekabel ist auch gekommen.
+  fr: Le bracelet-câble de charge est arrivé aussi.
+  hu: A töltőkábel-karkötő is megérkezett.
+- sentence: แต่ระยะยาวก็ต้องดูอีกทีนะ
+  sentence_id: 00e7af14870aca18d7650345dc8a1467b3226a0fc3ac09789f96a82f8e52e5ba
+  en: But we'll have to see again in the long run.
+  ru: Но в долгосрочной перспективе ещё надо будет посмотреть.
+  de: Aber auf lange Sicht müssen wir noch mal schauen.
+  fr: Mais sur le long terme, il faudra voir.
+  hu: De hosszú távon még meg kell nézni.
+- sentence: จ้ะ ฝันดีจ้า
+  sentence_id: 0180834f4bbb576ea755662a214cf319bb7d1d04464a5cbfd175c7245f66b57a
+  en: Okay, sweet dreams.
+  ru: Ладно, сладких снов.
+  de: Okay, träum schön.
+  fr: D'accord, fais de beaux rêves.
+  hu: Jó, szép álmokat!
+- sentence: นกจมูกหลอดหางสั้น
+  sentence_id: 01c9bc2ca1593f119ce111025aa55ce1fb0df08beb5d3902dbcffbf3ef16e8e8
+  en: Short-tailed shearwater
+  ru: Короткохвостый буревестник
+  de: Kurzschwanz-Sturmtaucher
+  fr: Puffin à bec grêle
+  hu: Rövidfarkú vészmadár
+- sentence: ชานนท์ อักขระชาตะ
+  sentence_id: 003cfa8e9771c39022e63fa74dc0821e87ae7eeb268454163d25fd44f083f985
+  en: Chanon Akkharachata
+  ru: Чанон Аккхарачата
+  de: Chanon Akkharachata
+  fr: Chanon Akkharachata
+  hu: Chanon Akkharachata
+- sentence: จิดา จารุสกุล
+  sentence_id: 018df2a0c6e2a99376d07a7268b3fc7257ad9901f23263dd20c794b6ff1bfa99
+  en: Chida Charusakul
+  ru: Чида Чарусакул
+  de: Chida Charusakul
+  fr: Chida Charusakul
+  hu: Chida Charusakul
+- sentence: แบบล็อกมาแต่ไกล
+  sentence_id: 0157319b349b200a37fdff3a8b61c823650a0bcac6850bc7d09c4f6adeb28b2c
+  en: Like it was locked on from far away.
+  ru: Как будто захвачено ещё издалека.
+  de: Als wäre es schon von weitem erfasst.
+  fr: Comme verrouillé de loin.
+  hu: Mintha már messziről rázárt volna.
+- sentence: ไม่งั้นหมิ่นศาลนะ
+  sentence_id: 01589ed70d8acacffe7772d68aa20b79b172b1fb6439bc11e904c22c0b72f0eb
+  en: Otherwise it's contempt of court.
+  ru: Иначе это неуважение к суду.
+  de: Sonst ist das Missachtung des Gerichts.
+  fr: Sinon, c'est un outrage à la cour.
+  hu: Különben bíróság megsértése.
+- sentence: เขมนิจ จามิกรณ์
+  sentence_id: 01606bc93d4d30eb48e0e840d17ce035581ce77fc74cc62be41aac6799c91d41
+  en: Khemanit Chamikorn
+  ru: Кхеманит Чамикорн
+  de: Khemanit Chamikorn
+  fr: Khemanit Chamikorn
+  hu: Khemanit Chamikorn
+- sentence: เธียยะเกศ ไอยสุรางฆ์
+  sentence_id: 010fecd8002aad5beb914837064717e864765b208263a6cb4a1f1b34790dc900
+  en: Thiyaket Aiyasurang
+  ru: Тхиякет Айясуранг
+  de: Thiyaket Aiyasurang
+  fr: Thiyaket Aiyasurang
+  hu: Thiyaket Aiyasurang
+- sentence: ส่งใจมาแทนละกัน
+  sentence_id: 01440977ae889a63bcc75f0b123208c072acb1f40814e3d35d98a83abf35494d
+  en: Then just send your heart instead.
+  ru: Тогда просто пришли мне своё сердце.
+  de: Dann schick eben dein Herz.
+  fr: Alors envoie-moi ton cœur à la place.
+  hu: Akkor küldd inkább a szívedet.
