@@ -44,7 +44,7 @@ test.describe('the clip plays before the learner types', () => {
     await page.evaluate(() => {
       window.__blockAutoplay = false
     })
-    await page.getByRole('button', { name: '▶ Play' }).click()
+    await page.getByRole('button', { name: 'Play' }).click()
 
     await expect(page.getByText('Press play to hear it')).toBeHidden()
   })
@@ -54,7 +54,7 @@ test.describe('the clip plays before the learner types', () => {
     await mockBackend(page)
     await page.goto('/')
 
-    const control = page.getByRole('button', { name: '▶ Play' })
+    const control = page.getByRole('button', { name: 'Play' })
     await expect(page.getByText('Press play to hear it')).toBeVisible()
     const asked = await control.boundingBox()
 
@@ -92,7 +92,7 @@ test.describe('the clip plays before the learner types', () => {
       .poll(() => page.evaluate(() => document.querySelector('audio')?.ended), { timeout: 5000 })
       .toBe(true)
 
-    await page.getByRole('button', { name: '▶ Play' }).click()
+    await page.getByRole('button', { name: 'Play' }).click()
     const restarted = await page.evaluate(() => document.querySelector('audio').currentTime)
 
     // Rewound, not resumed — the whole clip is available again.
@@ -103,7 +103,7 @@ test.describe('the clip plays before the learner types', () => {
     await mockBackend(page)
     await page.goto('/')
 
-    await expect(page.getByRole('button', { name: '⏸ Pause' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
   })
 
   test('pausing stops the clip and keeps its position', async ({ page }) => {
@@ -112,10 +112,10 @@ test.describe('the clip plays before the learner types', () => {
 
     await expect.poll(() => page.evaluate(() => document.querySelector('audio').currentTime > 0)).toBe(true)
 
-    await page.getByRole('button', { name: '⏸ Pause' }).click()
+    await page.getByRole('button', { name: 'Pause' }).click()
     const pausedAt = await page.evaluate(() => document.querySelector('audio').currentTime)
 
-    await expect(page.getByRole('button', { name: '▶ Play' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
     expect(await page.evaluate(() => document.querySelector('audio').paused)).toBe(true)
 
     // The position holds rather than drifting while paused.
@@ -128,11 +128,11 @@ test.describe('the clip plays before the learner types', () => {
     await page.goto('/')
 
     await expect.poll(() => page.evaluate(() => document.querySelector('audio').currentTime > 0)).toBe(true)
-    await page.getByRole('button', { name: '⏸ Pause' }).click()
+    await page.getByRole('button', { name: 'Pause' }).click()
     const pausedAt = await page.evaluate(() => document.querySelector('audio').currentTime)
 
-    await page.getByRole('button', { name: '▶ Play' }).click()
-    await expect(page.getByRole('button', { name: '⏸ Pause' })).toBeVisible()
+    await page.getByRole('button', { name: 'Play' }).click()
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible()
 
     const resumedFrom = await page.evaluate(() => document.querySelector('audio').currentTime)
     expect(resumedFrom).toBeGreaterThanOrEqual(pausedAt - 0.05)

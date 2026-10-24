@@ -90,7 +90,7 @@ test.describe('the post-check summary (on by default)', () => {
     const sentence = await sentenceOnScreen(page)
     await field(page).fill(sentence)
 
-    await expect(audioControl(page)).toHaveText('⏸ Pause')
+    await expect(audioControl(page)).toHaveText('Pause')
   })
 
   test('Next exercise advances to a fresh, empty answer row', async ({ page }) => {

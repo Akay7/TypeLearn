@@ -51,8 +51,8 @@
     "incorrect": "✗ Helytelen — próbáld újra"
   },
   "audio": {
-    "play": "▶ Lejátszás",
-    "pause": "⏸ Szünet",
+    "play": "Lejátszás",
+    "pause": "Szünet",
     "autoplayBlocked": "Nyomd meg a lejátszást a meghallgatáshoz"
   },
   "keyboard": {

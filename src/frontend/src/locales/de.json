@@ -51,8 +51,8 @@
     "incorrect": "✗ Falsch — versuch es erneut"
   },
   "audio": {
-    "play": "▶ Abspielen",
-    "pause": "⏸ Pause",
+    "play": "Abspielen",
+    "pause": "Pause",
     "autoplayBlocked": "Drücke Abspielen, um es zu hören"
   },
   "keyboard": {
