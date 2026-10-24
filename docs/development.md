@@ -137,34 +137,24 @@ translation of every sentence ingestion can select, and **Ingest the corpus**
 loads it with `load_translations` after the corpus. Nothing needs a key or a
 network.
 
-The file is made once, on a developer's machine, with the Anthropic API. The key
-lives only in that shell. It is not in `.env`, the Secret, or the chart. The
-command reads the Common Voice release directly, the same selection ingestion
-makes, so it needs neither the cluster nor a database. Start with a trial run:
+To add to it, `translate_catalog` runs on a developer's machine against a local
+OpenAI-compatible server, such as Lemonade. No key is needed. The command reads
+the Common Voice release directly, the same selection ingestion makes, so it
+needs neither the cluster nor a database. Start the server, then do a trial run
+with the model name it lists:
 
 ```bash
 cd src/backend
-export ANTHROPIC_API_KEY=sk-ant-...
-uv run python manage.py translate_catalog "$TYPELEARN_CORPUS_DIR" --limit 20
-```
-
-Read what came back, then run it without `--limit`. For the whole catalog (about
-21k sentences into 5 languages) that is about 4,300 requests, a one-time spend.
-A re-run only requests the languages an entry is missing, and an interrupted run
-keeps everything that was saved: the file is written every 30 seconds and on
-exit. `--model` and `--effort` trade quality for cost, and `--languages en,ru`
-narrows the targets. Review the diff and commit the file.
-
-To use a local OpenAI-compatible server instead, such as Lemonade, start it and
-pass the model name it lists. No key is needed:
-
-```bash
 uv run python manage.py translate_catalog "$TYPELEARN_CORPUS_DIR" \
-  --provider openai-compatible --model <model name> --batch-size 10 --limit 20
+  --model <model name> --batch-size 10 --limit 20
 ```
 
 `--base-url` defaults to Lemonade's `http://localhost:8000/api/v1`. Local models
-are less reliable than Claude, so keep the batches small and read the trial run.
+are not always reliable, so keep the batches small and read what came back
+before running it without `--limit`. A re-run only requests the languages an
+entry is missing, and an interrupted run keeps everything that was saved: the
+file is written every 30 seconds and on exit. `--languages en,ru` narrows the
+targets. Review the diff and commit the file.
 
 To fix a bad translation, edit its line and commit. Loading replaces the text
 and clears that translation's ratings, because they were cast on different

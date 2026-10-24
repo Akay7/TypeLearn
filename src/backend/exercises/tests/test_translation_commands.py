@@ -216,16 +216,6 @@ def test_offline_provider_writes_to_an_explicit_directory(directory, corpus, tmp
     assert not directory.exists()
 
 
-def test_missing_key_fails_before_translating(directory, corpus, monkeypatch):
-    for variable in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_PROFILE'):
-        monkeypatch.delenv(variable, raising=False)
-
-    with pytest.raises(CommandError, match='ANTHROPIC_API_KEY'):
-        call_command('translate_catalog', str(corpus(1)), provider='anthropic')
-
-    assert not directory.exists()
-
-
 def test_a_missing_corpus_is_named(stub, directory, tmp_path):
     with pytest.raises(CommandError, match='Corpus file not found'):
         translate(tmp_path / 'nowhere')

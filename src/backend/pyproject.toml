@@ -8,11 +8,10 @@ authors = [
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12,<4.0"
 dependencies = [
-    "django>=6.1,<7.0",
-    "strawberry-graphql-django>=0.88.1,<0.89.0",
-    "psycopg[binary]>=3.3.4,<4.0.0",
-    "gunicorn>=26.1.0,<27.0.0",
-    "pillow>=12.3.0,<13.0.0",
+    "django>=6.1.2,<7.0",
+    "strawberry-graphql-django>=0.93.0,<0.94.0",
+    "psycopg[binary]>=3.3.6,<4.0.0",
+    "gunicorn>=26.2.0,<27.0.0",
     # Django's own static files — the admin's CSS — are served by the
     # application in every environment. They are a fixed set collected into the
     # image at build time, which is what WhiteNoise is for; the ingested clips
@@ -30,10 +29,7 @@ dev = [
     "pytest-django>=4.14.0,<5.0.0",
     # The debugger is attached to the running container, so it ships in the dev
     # image rather than being installed on a developer's host.
-    "debugpy>=1.8,<2.0",
-    # Machine translation, run once by a developer with `translate_catalog`
-    # to write the translation fixture. Never needed by a deployment.
-    "anthropic>=1.0,<2.0",
+    "debugpy>=1.8.22,<2.0",
 ]
 
 # This is a Django application, not a distributable library: there is no

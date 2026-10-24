@@ -84,21 +84,9 @@ def validated(result, sentences: list[str]) -> list[str]:
     return cleaned
 
 
-def get_provider(name: str, model: str = '', effort: str = '',
-                 refusal_fallback: bool = True, base_url: str = '') -> Provider:
+def get_provider(name: str, model: str = '', base_url: str = '') -> Provider:
     if name == 'offline':
         return OfflineProvider()
-    if name == 'anthropic':
-        try:
-            from .anthropic_provider import AnthropicProvider
-        except ImportError as error:
-            # The SDK is a dev dependency: a deployment never translates.
-            raise ProviderConfigurationError(
-                'The anthropic package is not installed. Run translate_catalog from the '
-                'dev environment (`uv sync` installs it).'
-            ) from error
-
-        return AnthropicProvider(model, effort, refusal_fallback)
     if name == 'openai-compatible':
         from .openai_provider import OpenAICompatibleProvider
 

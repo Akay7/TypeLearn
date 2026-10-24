@@ -33,11 +33,11 @@
 - [x] 6.3 Add the `anthropic` SDK to the dev dependency group and implement `AnthropicProvider` (structured JSON-array output, length and blank validation, key read from `ANTHROPIC_API_KEY` in the developer's shell, fails early when the key is missing; model, effort and refusal fallback passed in, not read from settings). Verify with unit tests using a stubbed client: a good batch, a wrong length, a blank item, and a missing key.
 - [x] 6.4 Extract `select_from_release` from `load_corpus`, and implement `translate_catalog CORPUS_ROOT` (design D8: the full selection read from the release with no database, target defaults, `--languages/--locale/--provider/--model/--effort/--batch-size/--limit/--dir`, requesting only the missing languages, the offline provider refusing the committed fixture, saves every 30 s and on exit, failure summary, non-zero exit). Verify with command tests: a fresh run, no database queries, a re-run makes no provider calls and leaves the file byte-identical, a resume after a failed batch, an interrupted run keeps what came back, new sentences and languages only, hand corrections kept, and the source language excluded.
 - [x] 6.5 Rewrite `load_translations` to read the fixture (match by sentence, then sentence id; create missing machine rows; update changed text while clearing its ratings; leave learner rows alone; skip over-long text; report counts; a missing file is a no-op, an invalid one fails). Verify with command tests: loading into a fresh catalog, an idempotent re-load that keeps ratings, a changed text clearing ratings, unmatched entries reported, and a database rebuild restoring everything with zero provider calls.
-- [ ] 6.6 Run `translate_catalog` against the Thai release with a real key: first `--limit 20`, reviewing the output and the cost, then the full run. Commit `exercises/fixtures/translations/th.yaml`.
+- [x] 6.6 Run `translate_catalog` against the Thai release with a real key: first `--limit 20`, reviewing the output and the cost, then the full run. Commit `exercises/fixtures/translations/th.yaml`.
 
 ## 7. Chart
 
-- [ ] 7.1 Change the ingest Job command to `load_corpus ... && load_translations`. Verify with `helm template` output, and by ingesting in a local cluster once the fixture exists.
+- [x] 7.1 Change the ingest Job command to `load_corpus ... && load_translations`. Verify with `helm template` output, and by ingesting in a local cluster once the fixture exists.
 - [x] 7.2 Keep provider keys and translation out of the chart, the Tiltfile, and `.env.example`: no translate Job, no `translate` values, no `_API_KEY` secret rule. Verify that `helm template` renders no Job other than ingest.
 
 ## 8. Frontend

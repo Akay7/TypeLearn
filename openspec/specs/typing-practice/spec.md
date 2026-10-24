@@ -127,12 +127,12 @@ than failing silently.
 
 #### Scenario: Playing on presentation
 - **WHEN** an exercise is presented
-- **THEN** the clip at that exercise's `audioUrl` starts playing without the
+- **THEN** the clip at that exercise's `originalAudio.url` starts playing without the
   learner activating anything
 
 #### Scenario: Playing audio
 - **WHEN** the learner activates the play control while the clip is stopped
-- **THEN** the clip at the exercise's `audioUrl` plays through an HTML5 `<audio>`
+- **THEN** the clip at the exercise's `originalAudio.url` plays through an HTML5 `<audio>`
   element
 
 #### Scenario: The control shows as Pause while playing

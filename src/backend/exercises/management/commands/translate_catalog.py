@@ -1,7 +1,7 @@
 """Machine-translate the corpus's selected sentences into the translation fixture.
 
-Run once, on a developer's machine, with the provider's key exported in that
-shell; the result is committed and every database loads it with
+Run once, on a developer's machine, against a local model server; the result
+is committed and every database loads it with
 `load_translations`. The sentences come straight from the Common Voice release,
 chosen by the same selection ingestion makes, so no database or cluster is
 needed. A language an entry already has is never requested again, so a re-run
@@ -59,22 +59,14 @@ class Command(BaseCommand):
             help='Comma-separated targets. Default: every interface language except the source.',
         )
         parser.add_argument(
-            '--provider', default='anthropic', help='anthropic, openai-compatible (a local server) or offline. Default: anthropic.'
+            '--provider', default='openai-compatible',
+            help='openai-compatible (a local server) or offline. Default: openai-compatible.'
         )
         parser.add_argument('--model', default='', help="Default: the provider's own.")
         parser.add_argument(
             '--base-url', default='',
             help='For openai-compatible: the server API root. '
                  'Default: http://localhost:8000/api/v1 (Lemonade).',
-        )
-        parser.add_argument(
-            '--effort', default='',
-            help="The model's effort level (low, medium, high, xhigh, max). "
-                 "Default: the API's.",
-        )
-        parser.add_argument(
-            '--no-refusal-fallback', dest='refusal_fallback', action='store_false',
-            help="Don't re-run a declined batch on the fallback model.",
         )
         parser.add_argument(
             '--batch-size', type=int, default=DEFAULT_BATCH_SIZE,
@@ -107,8 +99,7 @@ class Command(BaseCommand):
             raise CommandError('--limit must be at least 1.')
 
         try:
-            provider = get_provider(options['provider'], options['model'], options['effort'],
-                                    options['refusal_fallback'], options['base_url'])
+            provider = get_provider(options['provider'], options['model'], options['base_url'])
         except ProviderConfigurationError as error:
             raise CommandError(str(error)) from error
 
