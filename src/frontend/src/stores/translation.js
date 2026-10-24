@@ -19,17 +19,17 @@ const TRANSLATIONS_QUERY = `
 `
 
 const RATE_MUTATION = `
-  mutation Rate($id: ID!, $clientId: String!, $value: TranslationRatingValue!) {
-    rateTranslation(translationId: $id, clientId: $clientId, value: $value) {
-      id text origin upVotes downVotes
+  mutation Rate($data: TranslationRatingInput!) {
+    translation {
+      rateTranslation(data: $data) { id text origin upVotes downVotes }
     }
   }
 `
 
 const PROPOSE_MUTATION = `
-  mutation Propose($exerciseId: ID!, $language: String!, $text: String!, $clientId: String!) {
-    proposeTranslation(exerciseId: $exerciseId, language: $language, text: $text, clientId: $clientId) {
-      accepted
+  mutation Propose($data: TranslationCreateInput!) {
+    translation {
+      proposeTranslation(data: $data) { id }
     }
   }
 `
@@ -144,13 +144,11 @@ export const useTranslationStore = defineStore('translation', () => {
 
     try {
       const data = await graphql(RATE_MUTATION, {
-        id: translation.id,
-        clientId: clientId(),
-        value: sent,
+        data: { translation: { set: translation.id }, clientId: clientId(), value: sent },
       })
       // Every cached copy of this translation, whichever exercise key holds it.
       for (const [k, cached] of Object.entries(translations.value)) {
-        if (cached?.id === translation.id) translations.value[k] = data.rateTranslation
+        if (cached?.id === translation.id) translations.value[k] = data.translation.rateTranslation
       }
       if (sent === 'NONE') delete ratings.value[translation.id]
       else ratings.value[translation.id] = sent
@@ -175,10 +173,12 @@ export const useTranslationStore = defineStore('translation', () => {
 
     try {
       await graphql(PROPOSE_MUTATION, {
-        exerciseId: exercise.current.id,
-        language: language.value,
-        text: trimmed,
-        clientId: clientId(),
+        data: {
+          exercise: { set: exercise.current.id },
+          language: language.value,
+          text: trimmed,
+          clientId: clientId(),
+        },
       })
       return null
     } catch (error) {

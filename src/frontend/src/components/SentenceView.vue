@@ -69,7 +69,7 @@ const symbolCount = computed(() =>
         -->
         <AudioPlayer
           :key="`${store.current.id}:${store.result === 'correct' && settings.showCompletionStats}`"
-          :src="store.current.audioUrl"
+          :src="store.current.originalAudio.url"
         />
       </div>
 

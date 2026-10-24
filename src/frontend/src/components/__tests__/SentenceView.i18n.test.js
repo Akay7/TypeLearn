@@ -16,7 +16,12 @@ import { useExerciseStore } from '../../stores/exercise'
 import { useSettingsStore } from '../../stores/settings'
 import SentenceView from '../SentenceView.vue'
 
-const EXERCISE = { id: '1', sentence: 'สวัสดี', audioUrl: '/media/clip.mp3', language: 'th' }
+const EXERCISE = {
+  id: '1',
+  sentence: 'สวัสดี',
+  originalAudio: { url: '/media/clip.mp3' },
+  language: 'th',
+}
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -43,7 +48,9 @@ describe('changing the interface language', () => {
 
     expect(wrapper.text()).toContain(EXERCISE.sentence)
     expect(exercise.current.sentence).toBe(EXERCISE.sentence)
-    expect(exercise.current.audioUrl).toBe(EXERCISE.audioUrl)
+    expect(wrapper.findComponent({ name: 'AudioPlayer' }).props('src')).toBe(
+      EXERCISE.originalAudio.url,
+    )
   })
 
   it("still translates the view's own chrome around that unchanged content", async () => {

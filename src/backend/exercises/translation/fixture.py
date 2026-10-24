@@ -10,7 +10,7 @@ that runs the translation.
 
     format: 1
     source: th
-    generated_by: anthropic claude-opus-5
+    generated_by: openai-compatible <model>
     sentences:
     - sentence: ฉันชอบกินข้าวผัด
       sentence_id: 7f3c2a…

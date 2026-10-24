@@ -66,10 +66,15 @@ class Translation(models.Model):
         PENDING = 'pending', 'Pending'
         REJECTED = 'rejected', 'Rejected'
 
+    # The longest text a translation holds, machine or learner. The column is
+    # declared from it and everything that checks a text before storing it
+    # reads it, so there is no second limit to keep in step.
+    TEXT_MAX_LENGTH = 500
+
     exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='translations')
     # A base language subtag ('fr'), the same values the interface language takes.
     language = models.CharField(max_length=8)
-    text = models.CharField(max_length=500)
+    text = models.CharField(max_length=TEXT_MAX_LENGTH)
     origin = models.CharField(max_length=16, choices=Origin.choices)
     status = models.CharField(max_length=16, choices=Status.choices)
     # Which provider and model produced a machine row; blank for a learner's.

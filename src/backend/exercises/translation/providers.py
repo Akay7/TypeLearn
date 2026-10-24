@@ -5,7 +5,7 @@ same order, or raises `ProviderError` for the whole batch. It never returns a
 partial or blank result: the command writes a batch only when every item in it
 is usable.
 """
-from django.conf import settings
+from exercises.models import Translation
 
 
 class ProviderError(Exception):
@@ -77,28 +77,16 @@ def validated(result, sentences: list[str]) -> list[str]:
         if not isinstance(item, str) or not item.strip():
             raise ProviderError(f'translation {index} is blank')
         item = item.strip()
-        if len(item) > settings.TRANSLATION_MAX_LENGTH:
+        if len(item) > Translation.TEXT_MAX_LENGTH:
             raise ProviderError(f'translation {index} is longer than '
-                                f'{settings.TRANSLATION_MAX_LENGTH} characters')
+                                f'{Translation.TEXT_MAX_LENGTH} characters')
         cleaned.append(item)
     return cleaned
 
 
-def get_provider(name: str, model: str = '', effort: str = '',
-                 refusal_fallback: bool = True, base_url: str = '') -> Provider:
+def get_provider(name: str, model: str = '', base_url: str = '') -> Provider:
     if name == 'offline':
         return OfflineProvider()
-    if name == 'anthropic':
-        try:
-            from .anthropic_provider import AnthropicProvider
-        except ImportError as error:
-            # The SDK is a dev dependency: a deployment never translates.
-            raise ProviderConfigurationError(
-                'The anthropic package is not installed. Run translate_catalog from the '
-                'dev environment (`uv sync` installs it).'
-            ) from error
-
-        return AnthropicProvider(model, effort, refusal_fallback)
     if name == 'openai-compatible':
         from .openai_provider import OpenAICompatibleProvider
 

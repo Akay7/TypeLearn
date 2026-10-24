@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 f'{counts["unchanged"]} unchanged, {counts["unmatched"]} matched no exercise'
                 + (f', {counts["conflicts"]} clashed with a learner translation'
                    if counts['conflicts'] else '')
-                + (f', {counts["too_long"]} longer than {settings.TRANSLATION_MAX_LENGTH} '
+                + (f', {counts["too_long"]} longer than {Translation.TEXT_MAX_LENGTH} '
                    'characters' if counts['too_long'] else '') + '.'
             ))
 
@@ -110,7 +110,7 @@ class Command(BaseCommand):
         now = timezone.now()
         for exercise_id, record in matched.items():
             text = record['text'].strip()
-            if len(text) > settings.TRANSLATION_MAX_LENGTH:
+            if len(text) > Translation.TEXT_MAX_LENGTH:
                 # A hand edit gone long: skipped and reported, rather than
                 # failing the whole load on the column's limit.
                 counts['too_long'] += 1

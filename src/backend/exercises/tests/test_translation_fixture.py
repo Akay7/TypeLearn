@@ -1,5 +1,6 @@
 import pytest
 
+from exercises.models import Translation
 from exercises.translation.fixture import (
     DEFAULT_DIR,
     FixtureError,
@@ -103,13 +104,18 @@ def test_offline_provider_is_deterministic():
     ['a', '   '],
     ['a', 3],
     'not a list',
-    ['a', 'x' * 501],
+    ['a', 'x' * (Translation.TEXT_MAX_LENGTH + 1)],
 ])
-def test_validated_refuses_unusable_results(result, settings):
-    settings.TRANSLATION_MAX_LENGTH = 500
-
+def test_validated_refuses_unusable_results(result):
     with pytest.raises(ProviderError):
         validated(result, ['ก', 'ข'])
+
+
+def test_validated_refuses_what_the_column_cannot_hold(monkeypatch):
+    monkeypatch.setattr(Translation, 'TEXT_MAX_LENGTH', 5)
+
+    with pytest.raises(ProviderError, match='longer than 5 characters'):
+        validated(['short', 'longer'], ['ก', 'ข'])
 
 
 def test_validated_strips():

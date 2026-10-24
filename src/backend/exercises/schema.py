@@ -5,21 +5,23 @@ left on, so `up_votes` here is `upVotes` in the schema.
 
 There is no authentication. The catalog is public, so query fields carry no
 permission extension. The only writes are the two anonymous translation
-mutations, and they identify their caller by nothing but a `clientId` argument
-and a hash of the address: no cookie, no session. That is what keeps the
+mutations, and they identify their caller by nothing but the `clientId` in their
+input and a hash of the address: no cookie, no session. That is what keeps the
 endpoint's CSRF exemption in `typelearn/urls.py` sound — a forged cross-site
 request carries nothing a direct one would not. A mutation that ever reads the
 session has to come with the exemption removed.
 """
+from collections import defaultdict
 from datetime import timedelta
 from enum import Enum
-from typing import Optional
+from typing import NoReturn, cast
 
 import strawberry
 import strawberry_django
 from django.conf import settings
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import F, Prefetch, QuerySet
+from django.db.models import F, Model, Prefetch, QuerySet
 from django.utils import timezone
 from graphql import GraphQLError
 from strawberry.extensions import (
@@ -28,15 +30,16 @@ from strawberry.extensions import (
     MaxTokensLimiter,
     QueryDepthLimiter,
 )
-from strawberry_django.fields.field import StrawberryDjangoField
 from strawberry_django.optimizer import DjangoOptimizerExtension
 from strawberry_django.ordering import Ordering
+
+from typelearn.graphql import update_model_instance_based_on_input
 
 from . import models
 from .translation.identity import address_hash, valid_client_id
 
 
-def fail(code: str, message: str):
+def fail(code: str, message: str) -> NoReturn:
     """Refuse a request with a stable, machine-readable code. The frontend maps
     the code to a message in the learner's language and never parses this
     English one."""
@@ -104,10 +107,10 @@ class ExerciseOrder:
     created_at: Ordering
 
 
-@strawberry.enum
-class TranslationOrigin(Enum):
-    MACHINE = models.Translation.Origin.MACHINE.value
-    LEARNER = models.Translation.Origin.LEARNER.value
+# Publishes the model's own choices, by member name (`MACHINE`), so an origin
+# added to the model cannot be missing from the schema. `strawberry.enum` marks
+# the class itself, which is why fields annotate the model's class directly.
+strawberry.enum(models.Translation.Origin, name='TranslationOrigin')
 
 
 @strawberry.enum
@@ -118,7 +121,7 @@ class TranslationRatingValue(Enum):
     NONE = 0
 
 
-@strawberry_django.type(models.Translation, name='Translation')
+@strawberry_django.type(model=models.Translation, name='Translation')
 class TranslationType:
     """A translation of an exercise's sentence into one language."""
 
@@ -127,21 +130,31 @@ class TranslationType:
     text: strawberry.auto
     up_votes: strawberry.auto
     down_votes: strawberry.auto
-
-    @strawberry.field
-    def origin(self) -> TranslationOrigin:
-        return TranslationOrigin(self.origin)
+    origin: models.Translation.Origin
 
 
-@strawberry.type
-class ProposeTranslationResult:
-    # Always true when there is no error: a refused suggestion is an error with
-    # a code, so a client never has to tell two kinds of "no" apart.
-    accepted: bool
+@strawberry_django.input(model=models.Translation)
+class TranslationCreateInput:
+    """A learner's suggestion. What a client may not choose — its origin, its
+    pending status, the hash of its address — the server sets."""
+
+    exercise: strawberry.auto
+    language: strawberry.auto
+    text: strawberry.auto
+    client_id: strawberry.auto
+
+
+@strawberry_django.input(model=models.TranslationRating)
+class TranslationRatingInput:
+    translation: strawberry.auto
+    client_id: strawberry.auto
+    # Not `auto`, which would publish a bare Int: `NONE` withdraws the rating
+    # and is no value a stored rating holds.
+    value: TranslationRatingValue
 
 
 @strawberry_django.type(
-    models.Exercise,
+    model=models.Exercise,
     name='Exercise',
     filters=ExerciseFilter,
     ordering=ExerciseOrder,
@@ -153,21 +166,15 @@ class ExerciseType:
     sentence: strawberry.auto
     # The column is blank-able rather than nullable, but the published contract
     # allows null so a client never has to assume the corpus supplied an id.
-    sentence_id: Optional[str]
+    sentence_id: str | None
     up_votes: strawberry.auto
     difficulty: strawberry.auto
-
-    @strawberry.field
-    def audio_url(self, info: strawberry.Info) -> str:
-        """An absolute URL, because the frontend is served from another origin.
-
-        `FileField.url` is site-relative (`/media/clips/...`), which an <audio>
-        element on the Vite origin would resolve against the Vite dev server.
-        """
-        return info.context.request.build_absolute_uri(self.original_audio.url)
+    # Published as `File { url }`, which `typelearn.graphql` (imported above)
+    # makes the type of every file field.
+    original_audio: strawberry.auto
 
     @strawberry_django.field(prefetch_related=[prefetch_shown_translation])
-    def translation(self, language: str) -> Optional[TranslationType]:
+    def translation(self, language: str) -> TranslationType | None:
         """The translation a learner sees in `language`, or null.
 
         Null, never an error, for a language nothing is translated into — the
@@ -183,43 +190,16 @@ class ExerciseType:
         return models.Translation.objects.shown_first(language).filter(exercise=self).first()
 
 
-class LimitedField(StrawberryDjangoField):
-    """A list field whose `limit` argument is applied last.
-
-    The published contract takes a plain `limit: Int` rather than the library's
-    `pagination` input, so the slice has to be applied by hand. It cannot be
-    applied in the resolver: strawberry-django applies `filters` and `ordering`
-    to whatever the resolver returns, and Django refuses to filter or reorder a
-    queryset once a slice has been taken. Overriding `get_queryset` puts the
-    slice after them, where a LIMIT belongs.
-    """
-
-    def get_queryset(
-        self, queryset: QuerySet, info: strawberry.Info, *, limit: Optional[int] = None, **kwargs
-    ) -> QuerySet:
-        queryset = super().get_queryset(queryset, info, **kwargs)
-        return queryset if limit is None else queryset[:limit]
-
-
 @strawberry.type
 class Query:
-    @strawberry_django.field(field_cls=LimitedField)
-    def exercises(
-        self,
-        filters: Optional[ExerciseFilter] = None,
-        ordering: Optional[list[ExerciseOrder]] = None,
-        limit: Optional[int] = None,
-    ) -> list[ExerciseType]:
-        """Declaring `filters` and `ordering` in the signature is what publishes
-        them: strawberry-django adds those arguments on its own only to fields
-        that have no resolver, but it applies whatever arrives under those names
-        to the queryset the resolver returns. The resolver therefore hands back
-        the unnarrowed queryset and lets the library do the work.
-        """
-        return models.Exercise.objects.all()
+    # No resolver, so the library publishes `filters`, `ordering` and
+    # `pagination` itself and applies them in that order: the page is cut from
+    # the filtered, ordered list. Without `pagination` nothing is cut; a page
+    # asked for is capped at `PAGINATION_MAX_LIMIT`.
+    exercises: list[ExerciseType] = strawberry_django.field(pagination=True)
 
     @strawberry_django.field
-    def exercise(self, id: strawberry.ID) -> Optional[ExerciseType]:
+    def exercise(self, id: strawberry.ID) -> ExerciseType | None:
         # Returning the queryset rather than the row lets the library resolve it
         # (`.first()`) with the optimizer applied.
         return models.Exercise.objects.filter(pk=id)
@@ -234,7 +214,7 @@ class Query:
         refused, so a client asking for too much still gets a deck.
         """
         if size < 1:
-            raise GraphQLError(f'size must be at least 1, got {size}.')
+            fail('INVALID_SIZE', f'size must be at least 1, got {size}.')
         size = min(size, settings.EXERCISE_DECK_MAX_SIZE)
         return models.Exercise.objects.order_by('?')[:size]
 
@@ -252,126 +232,162 @@ def over_limit(queryset: QuerySet, time_field: str, request, client_id: str, lim
     )
 
 
-def require_client_id(client_id: str):
+def require_client_id(client_id: str | None):
     if not valid_client_id(client_id):
         fail('INVALID_CLIENT_ID', 'clientId must be a UUID.')
 
 
-def object_or_fail(queryset: QuerySet, pk: strawberry.ID, what: str):
+DUPLICATE = ('DUPLICATE', 'That translation has already been submitted.')
+
+# A model validation failure, by the field it names and its code, to the
+# refusal a client receives. `not_found` comes from the input applier.
+VALIDATION_REFUSALS: dict[tuple[str, str | None], tuple[str, str]] = {
+    ('exercise', 'not_found'): ('NOT_FOUND', 'No exercise has that id.'),
+    ('translation', 'not_found'): ('NOT_FOUND', 'No translation has that id.'),
+    ('text', 'blank'): ('BLANK', 'A translation is required.'),
+    ('text', 'max_length'): (
+        'TOO_LONG', f'A translation is at most {models.Translation.TEXT_MAX_LENGTH} characters.'
+    ),
+    (NON_FIELD_ERRORS, 'unique_together'): DUPLICATE,
+}
+
+
+def refuse(error: ValidationError) -> NoReturn:
+    """Refuse a model validation failure — the first one — with the API's code
+    for it.
+
+    Every field a client does not supply is filled in by the server, so
+    anything not in `VALIDATION_REFUSALS` is unforeseen; it is still refused
+    with a code rather than as an uncoded error.
+    """
+    field, errors = next(iter(error.error_dict.items()))
+    refusal = VALIDATION_REFUSALS.get((field, errors[0].code))
+    if refusal is None:
+        fail('INVALID', ' '.join(error.messages))
+    fail(*refusal)
+
+
+def clean_or_fail(instance: Model):
+    """Validate a row by the model's own rules before it is saved."""
     try:
-        found = queryset.filter(pk=int(pk)).first()
-    except (TypeError, ValueError):
-        found = None
-    if found is None:
-        fail('NOT_FOUND', f'No {what} has id {pk}.')
-    return found
+        instance.full_clean()
+    except ValidationError as error:
+        refuse(error)
 
 
 @strawberry.type
-class Mutation:
-    @strawberry.mutation
-    def rate_translation(
-        self,
-        info: strawberry.Info,
-        translation_id: strawberry.ID,
-        client_id: str,
-        value: TranslationRatingValue,
-    ) -> TranslationType:
+class TranslationMutations:
+    @strawberry_django.mutation
+    @transaction.atomic
+    def rate_translation(self, info: strawberry.Info, data: TranslationRatingInput) -> TranslationType:
         """Record this browser's verdict on a published translation, replacing
         its earlier one; `NONE` withdraws it. The translation's counts move in
         the same transaction as the rating row, so they never disagree."""
         request = info.context.request
-        require_client_id(client_id)
+        require_client_id(data.client_id)
 
-        with transaction.atomic():
+        rating = models.TranslationRating(address_hash=address_hash(request))
+        field_errors: defaultdict[str, list[ValidationError]] = defaultdict(list)
+        update_model_instance_based_on_input(data, rating, field_errors)
+        if 'translation' not in field_errors:
             # Locked, so two ratings of one translation cannot both read the
             # same old counts.
-            translation = object_or_fail(
-                models.Translation.objects.select_for_update(), translation_id, 'translation'
+            rating.translation = models.Translation.objects.select_for_update().get(
+                pk=rating.translation_id
             )
-            if translation.status != models.Translation.Status.PUBLISHED:
-                fail('NOT_PUBLISHED', 'Only a published translation can be rated.')
-            if over_limit(models.TranslationRating.objects, 'updated_at', request, client_id,
-                          settings.TRANSLATION_RATINGS_PER_HOUR):
-                fail('RATE_LIMITED', 'Too many ratings. Try again later.')
+        # Only a published translation is visible, so any other is refused as
+        # an id no row has. Assigned rather than appended, replacing the
+        # applier's own entry, so the response cannot tell a hidden suggestion
+        # from nothing.
+        if ('translation' in field_errors
+                or rating.translation.status != models.Translation.Status.PUBLISHED):
+            field_errors['translation'] = [ValidationError('Not found.', code='not_found')]
+        if field_errors:
+            refuse(ValidationError(field_errors))
+        translation = rating.translation
 
-            existing = models.TranslationRating.objects.filter(
-                translation=translation, client_id=client_id
-            ).first()
-            old = existing.value if existing else 0
-            new = value.value
-            if new == old:
-                return translation
+        if over_limit(models.TranslationRating.objects, 'updated_at', request, rating.client_id,
+                      settings.TRANSLATION_RATINGS_PER_HOUR):
+            fail('RATE_LIMITED', 'Too many ratings. Try again later.')
 
-            if new == 0:
-                existing.delete()
-            elif existing:
-                existing.value = new
-                existing.address_hash = address_hash(request)
-                existing.save()
-            else:
-                models.TranslationRating.objects.create(
-                    translation=translation, client_id=client_id,
-                    address_hash=address_hash(request), value=new,
-                )
+        existing = models.TranslationRating.objects.filter(
+            translation=translation, client_id=rating.client_id
+        ).first()
+        old = existing.value if existing else 0
+        new = rating.value
+        if new == old:
+            return cast(TranslationType, translation)
 
-            up_delta = int(new == 1) - int(old == 1)
-            down_delta = int(new == -1) - int(old == -1)
-            models.Translation.objects.filter(pk=translation.pk).update(
-                up_votes=F('up_votes') + up_delta,
-                down_votes=F('down_votes') + down_delta,
-            )
-            translation.refresh_from_db()
-        return translation
+        if new == 0:
+            existing.delete()
+        else:
+            if existing:
+                # The browser's earlier verdict, changed.
+                existing.value, existing.address_hash = new, rating.address_hash
+                rating = existing
+            clean_or_fail(rating)
+            rating.save()
 
-    @strawberry.mutation
+        up_delta = int(new == 1) - int(old == 1)
+        down_delta = int(new == -1) - int(old == -1)
+        models.Translation.objects.filter(pk=translation.pk).update(
+            up_votes=F('up_votes') + up_delta,
+            down_votes=F('down_votes') + down_delta,
+        )
+        translation.refresh_from_db(fields=['up_votes', 'down_votes'])
+        return cast(TranslationType, translation)
+
+    @strawberry_django.mutation
     def propose_translation(
-        self,
-        info: strawberry.Info,
-        exercise_id: strawberry.ID,
-        language: str,
-        text: str,
-        client_id: str,
-    ) -> ProposeTranslationResult:
-        """Store a learner's suggestion as pending. Nobody sees it until a
-        moderator publishes it in the admin."""
+        self, info: strawberry.Info, data: TranslationCreateInput
+    ) -> TranslationType:
+        """Store a learner's suggestion as pending and return it. Nobody else
+        sees it until a moderator publishes it in the admin."""
         request = info.context.request
-        require_client_id(client_id)
-        if not translatable_language(language):
-            fail('UNSUPPORTED_LANGUAGE', f'Translations into {language!r} are not accepted.')
-        exercise = object_or_fail(models.Exercise.objects, exercise_id, 'exercise')
+        require_client_id(data.client_id)
+        if not translatable_language(data.language):
+            fail('UNSUPPORTED_LANGUAGE', f'Translations into {data.language!r} are not accepted.')
 
-        text = text.strip()
-        if not text:
-            fail('BLANK', 'A translation is required.')
-        if len(text) > settings.TRANSLATION_MAX_LENGTH:
-            fail('TOO_LONG', f'A translation is at most {settings.TRANSLATION_MAX_LENGTH} characters.')
+        # Built with only what the input cannot carry; the applier sets the rest.
+        suggestion = models.Translation(
+            origin=models.Translation.Origin.LEARNER,
+            status=models.Translation.Status.PENDING,
+            address_hash=address_hash(request),
+        )
+        field_errors: defaultdict[str, list[ValidationError]] = defaultdict(list)
+        update_model_instance_based_on_input(data, suggestion, field_errors)
+        if field_errors:
+            refuse(ValidationError(field_errors))
+        suggestion.text = suggestion.text.strip()
+        # The model's own rules: not blank, no longer than the column, and not
+        # identical to any existing text — the shown translation, a pending
+        # suggestion, or one already rejected — which is nothing new to review.
+        clean_or_fail(suggestion)
 
         learner_rows = models.Translation.objects.filter(origin=models.Translation.Origin.LEARNER)
-        if over_limit(learner_rows, 'created_at', request, client_id,
+        if over_limit(learner_rows, 'created_at', request, suggestion.client_id,
                       settings.TRANSLATION_PROPOSALS_PER_HOUR):
             fail('RATE_LIMITED', 'Too many suggestions. Try again later.')
 
-        # Identical to any existing text — the shown translation, a pending
-        # suggestion, or one already rejected — is nothing new to review.
-        duplicate = models.Translation.objects.filter(
-            exercise=exercise, language=language, text=text
-        )
-        if duplicate.exists():
-            fail('DUPLICATE', 'That translation has already been submitted.')
         try:
+            # A savepoint, so the caught error leaves any surrounding
+            # transaction usable.
             with transaction.atomic():
-                models.Translation.objects.create(
-                    exercise=exercise, language=language, text=text,
-                    origin=models.Translation.Origin.LEARNER,
-                    status=models.Translation.Status.PENDING,
-                    client_id=client_id, address_hash=address_hash(request),
-                )
+                suggestion.save()
         except IntegrityError:
             # The same text arrived from somewhere else between the check and
             # the insert.
-            fail('DUPLICATE', 'That translation has already been submitted.')
-        return ProposeTranslationResult(accepted=True)
+            fail(*DUPLICATE)
+        return cast(TranslationType, suggestion)
+
+
+@strawberry.type
+class Mutation:
+    @strawberry.field
+    def translation(self) -> TranslationMutations:
+        """The translation mutations, one level down. The namespace carries no
+        permission extension: the API has no authentication."""
+        return TranslationMutations()
 
 
 def build_schema() -> strawberry.Schema:

@@ -83,9 +83,15 @@ onBeforeUnmount(() => audio.value?.pause())
     />
     <button
       type="button"
-      class="inline-flex w-32 items-center justify-center whitespace-nowrap rounded-full bg-indigo-600 px-6 py-3 text-base font-medium text-white transition hover:bg-indigo-500"
+      class="inline-flex w-32 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-indigo-600 px-6 py-3 text-base font-medium text-white transition hover:bg-indigo-500"
       @click="toggle"
     >
+      <!-- Drawn icons rather than ▶/⏸ characters: Android swaps those for
+           its colour emoji, so the control looked different per platform. -->
+      <svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path v-if="playing" d="M3 2h3.5v12H3zM9.5 2H13v12H9.5z" />
+        <path v-else d="M4 1.5v13l10.5-6.5z" />
+      </svg>
       {{ playing ? t('audio.pause') : t('audio.play') }}
     </button>
 
