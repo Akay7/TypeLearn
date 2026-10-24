@@ -5,7 +5,7 @@ same order, or raises `ProviderError` for the whole batch. It never returns a
 partial or blank result: the command writes a batch only when every item in it
 is usable.
 """
-from django.conf import settings
+from exercises.models import Translation
 
 
 class ProviderError(Exception):
@@ -77,9 +77,9 @@ def validated(result, sentences: list[str]) -> list[str]:
         if not isinstance(item, str) or not item.strip():
             raise ProviderError(f'translation {index} is blank')
         item = item.strip()
-        if len(item) > settings.TRANSLATION_MAX_LENGTH:
+        if len(item) > Translation.TEXT_MAX_LENGTH:
             raise ProviderError(f'translation {index} is longer than '
-                                f'{settings.TRANSLATION_MAX_LENGTH} characters')
+                                f'{Translation.TEXT_MAX_LENGTH} characters')
         cleaned.append(item)
     return cleaned
 

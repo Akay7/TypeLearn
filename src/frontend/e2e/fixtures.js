@@ -94,21 +94,33 @@ export async function mockBackend(page, sentences = SENTENCES, { translations = 
       })
     }
     if (query.includes('mutation Rate')) {
-      const [, id, language] = variables.id.match(/^t(\d+)-(\w+)$/)
+      const { translation, value } = variables.data
+      const [, id, language] = translation.set.match(/^t(\d+)-(\w+)$/)
       return route.fulfill({
         json: {
           data: {
-            rateTranslation: {
-              ...translationOf(id, language),
-              upVotes: variables.value === 'UP' ? 1 : 0,
-              downVotes: variables.value === 'DOWN' ? 1 : 0,
+            translation: {
+              rateTranslation: {
+                ...translationOf(id, language),
+                upVotes: value === 'UP' ? 1 : 0,
+                downVotes: value === 'DOWN' ? 1 : 0,
+              },
             },
           },
         },
       })
     }
     if (query.includes('mutation Propose')) {
-      return route.fulfill({ json: { data: { proposeTranslation: { accepted: true } } } })
+      const { text } = variables.data
+      return route.fulfill({
+        json: {
+          data: {
+            translation: {
+              proposeTranslation: { id: 'suggested', text, origin: 'LEARNER', upVotes: 0, downVotes: 0 },
+            },
+          },
+        },
+      })
     }
 
     return route.fulfill({
@@ -117,7 +129,7 @@ export async function mockBackend(page, sentences = SENTENCES, { translations = 
           deck: sentences.map((sentence, i) => ({
             id: String(i),
             sentence,
-            audioUrl: `/media/clip-${i}.wav`,
+            originalAudio: { url: `/media/clip-${i}.wav` },
             difficulty: 1,
           })),
         },

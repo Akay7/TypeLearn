@@ -26,7 +26,7 @@ function storeWithDeck(sentences = [SENTENCE, 'ขอบคุณ']) {
   store.deck = sentences.map((sentence, id) => ({
     id: String(id),
     sentence,
-    audioUrl: `/clip-${id}.mp3`,
+    originalAudio: { url: `/clip-${id}.mp3` },
     difficulty: 1,
   }))
   store.index = 0
@@ -303,7 +303,7 @@ describe('the sentence the learner is asked for', () => {
     const store = storeWithDeck(['สวัสดี!'])
 
     expect(store.current.id).toBe('0')
-    expect(store.current.audioUrl).toBe('/clip-0.mp3')
+    expect(store.current.originalAudio.url).toBe('/clip-0.mp3')
   })
 })
 
@@ -313,7 +313,7 @@ function deckResponse(deck) {
 }
 
 function exercisesFor(ids) {
-  return ids.map((id) => ({ id, sentence: 'สวัสดี', audioUrl: `/${id}.mp3`, difficulty: 1 }))
+  return ids.map((id) => ({ id, sentence: 'สวัสดี', originalAudio: { url: `/${id}.mp3` }, difficulty: 1 }))
 }
 
 describe('loading the catalog', () => {
@@ -328,8 +328,8 @@ describe('loading the catalog', () => {
   it('keeps an exercise the Latin layout can type', async () => {
     // Reachable by switching layout, so it is a perfectly good exercise.
     respondWith([
-      { id: '1', sentence: 'hello!', audioUrl: '/1.mp3', difficulty: 1 },
-      { id: '2', sentence: 'สวัสดี', audioUrl: '/2.mp3', difficulty: 1 },
+      { id: '1', sentence: 'hello!', originalAudio: { url: '/1.mp3' }, difficulty: 1 },
+      { id: '2', sentence: 'สวัสดี', originalAudio: { url: '/2.mp3' }, difficulty: 1 },
     ])
 
     const store = useExerciseStore()
@@ -341,8 +341,8 @@ describe('loading the catalog', () => {
   it('leaves out an exercise no keyboard can type at all', async () => {
     // Presented, it would be complete before the learner typed anything.
     respondWith([
-      { id: '1', sentence: '🙂🙂', audioUrl: '/1.mp3', difficulty: 1 },
-      { id: '2', sentence: 'สวัสดี', audioUrl: '/2.mp3', difficulty: 1 },
+      { id: '1', sentence: '🙂🙂', originalAudio: { url: '/1.mp3' }, difficulty: 1 },
+      { id: '2', sentence: 'สวัสดี', originalAudio: { url: '/2.mp3' }, difficulty: 1 },
     ])
 
     const store = useExerciseStore()
@@ -353,7 +353,7 @@ describe('loading the catalog', () => {
   })
 
   it('reports an empty catalog when nothing survives', async () => {
-    respondWith([{ id: '1', sentence: '🙂', audioUrl: '/1.mp3', difficulty: 1 }])
+    respondWith([{ id: '1', sentence: '🙂', originalAudio: { url: '/1.mp3' }, difficulty: 1 }])
 
     const store = useExerciseStore()
     await store.load()
@@ -366,6 +366,17 @@ describe('loading the catalog', () => {
 describe('the deck comes from the server', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it("asks for each clip's URL through the exercise's audio file", async () => {
+    const fetch = vi.fn().mockResolvedValue(deckResponse(exercisesFor(['1'])))
+    vi.stubGlobal('fetch', fetch)
+
+    await useExerciseStore().load()
+
+    const { query } = JSON.parse(fetch.mock.calls[0][1].body)
+    expect(query).toMatch(/originalAudio\s*\{\s*url\s*\}/)
+    expect(query).not.toContain('audioUrl')
   })
 
   it('asks for a deck of a fixed size, never the whole catalog', async () => {

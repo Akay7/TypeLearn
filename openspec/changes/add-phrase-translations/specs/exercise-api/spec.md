@@ -46,37 +46,58 @@ accepts.
 ```graphql
 enum TranslationRatingValue { UP DOWN NONE }
 
-type Mutation {
-  rateTranslation(translationId: ID!, clientId: String!, value: TranslationRatingValue!): Translation!
-  proposeTranslation(exerciseId: ID!, language: String!, text: String!, clientId: String!): ProposeTranslationResult!
+input OneToManyInput { set: ID }
+
+input TranslationRatingInput {
+  translation: OneToManyInput!
+  clientId: String!
+  value: TranslationRatingValue!
 }
 
-type ProposeTranslationResult { accepted: Boolean! }
+input TranslationCreateInput {
+  exercise: OneToManyInput!
+  language: String!
+  text: String!
+  clientId: String
+}
+
+type TranslationMutations {
+  rateTranslation(data: TranslationRatingInput!): Translation!
+  proposeTranslation(data: TranslationCreateInput!): Translation!
+}
+
+type Mutation {
+  translation: TranslationMutations!
+}
 ```
 
 `clientId` is an opaque random identifier that the browser generates and keeps.
 It carries no authority beyond deduplicating ratings and scoping rate limits.
 `rateTranslation` with `NONE` withdraws the caller's rating, and it applies only
-to published translations. `proposeTranslation` stores a pending suggestion.
-Invalid input (unknown ids, unsupported language, blank or over-long text,
-malformed client id, a duplicate of an existing translation) SHALL return a
-GraphQL error with a stable, machine-readable code and store nothing.
+to published translations. `proposeTranslation` stores a pending suggestion and
+returns it. Invalid input (unknown ids, unsupported language, blank or
+over-long text, malformed or missing client id, a duplicate of an existing
+translation) SHALL return a GraphQL error with a stable, machine-readable code
+and store nothing.
 
 #### Scenario: Rating is idempotent per client
-- **WHEN** the same `clientId` sends `rateTranslation(..., value: UP)` twice
+- **WHEN** the same `clientId` sends `translation { rateTranslation(data: {..., value: UP}) }` twice
 - **THEN** the translation's `upVotes` increased by one in total, not two
 
 #### Scenario: Rating an unpublished translation
 - **WHEN** a client rates a pending or rejected translation
-- **THEN** the response is an error and no rating is stored
+- **THEN** the response is exactly the error an id no translation has gets,
+  so it does not reveal that the hidden translation exists, and no rating is
+  stored
 
 #### Scenario: Proposal stored as pending
 - **WHEN** a client proposes a valid new translation
-- **THEN** `accepted` is true and a pending learner translation exists, which
-  the `translation` field does not return
+- **THEN** the mutation returns the new translation, with origin `LEARNER`,
+  and it is stored as pending, which the `translation` field does not return
 
 #### Scenario: Over-long proposal
-- **WHEN** a client proposes text longer than the configured maximum
+- **WHEN** a client proposes text longer than the longest translation the
+  catalog stores
 - **THEN** the response is an error with a length code and nothing is stored
 
 ### Requirement: Write rate limits

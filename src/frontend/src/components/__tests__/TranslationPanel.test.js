@@ -37,7 +37,7 @@ function setup({ show = true, language = 'en' } = {}) {
   settings.showTranslation = show
   settings.interfaceLanguage = language
   const exercise = useExerciseStore()
-  exercise.deck = [{ id: '1', sentence: 'สวัสดี', audioUrl: '/1.mp3' }]
+  exercise.deck = [{ id: '1', sentence: 'สวัสดี', originalAudio: { url: '/1.mp3' } }]
   exercise.status = 'ready'
   return { settings, exercise }
 }
@@ -131,7 +131,11 @@ describe('rating', () => {
   it('marks the chosen rating as pressed', async () => {
     vi.stubGlobal(
       'fetch',
-      backend({ mutation: () => ({ data: { rateTranslation: { ...TRANSLATION, upVotes: 1 } } }) }),
+      backend({
+        mutation: () => ({
+          data: { translation: { rateTranslation: { ...TRANSLATION, upVotes: 1 } } },
+        }),
+      }),
     )
     setup()
     const wrapper = await mountPanel()
@@ -159,7 +163,15 @@ describe('rating', () => {
 
 describe('suggesting', () => {
   it('sends the suggestion, closes the form and thanks the learner', async () => {
-    const fetch = backend({ mutation: () => ({ data: { proposeTranslation: { accepted: true } } }) })
+    const fetch = backend({
+      mutation: () => ({
+        data: {
+          translation: {
+            proposeTranslation: { ...TRANSLATION, id: 't2', text: 'Hi there', origin: 'LEARNER' },
+          },
+        },
+      }),
+    })
     vi.stubGlobal('fetch', fetch)
     setup()
     const wrapper = await mountPanel()
@@ -216,7 +228,7 @@ describe('typing a suggestion never touches the answer', () => {
   it('does not let Enter in a suggestion move on from the summary', async () => {
     vi.stubGlobal('fetch', backend())
     const { exercise } = setup()
-    exercise.deck = [...exercise.deck, { id: '2', sentence: 'ขอบคุณ', audioUrl: '/2.mp3' }]
+    exercise.deck = [...exercise.deck, { id: '2', sentence: 'ขอบคุณ', originalAudio: { url: '/2.mp3' } }]
     exercise.result = 'correct'
     mount(CompletionStats, { global: { plugins: [i18n] }, attachTo: document.body })
     const textarea = document.createElement('textarea')

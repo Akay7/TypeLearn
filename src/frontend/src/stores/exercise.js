@@ -18,7 +18,7 @@ const DECK_QUERY = `
     deck(size: ${DECK_SIZE}) {
       id
       sentence
-      audioUrl
+      originalAudio { url }
       difficulty
     }
   }

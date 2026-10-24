@@ -165,7 +165,9 @@ The frontend never downloads the whole catalog, however large it is: each page
 load asks for a random deck of 200 (`deck(size: 200)`), and a new deck is drawn
 when the learner finishes one. The server caps a deck at
 `EXERCISE_DECK_MAX_SIZE` (default 500), settable under `env:` like any other
-backend variable.
+backend variable. A client paging through `exercises` with
+`pagination: { offset, limit }` gets at most `STRAWBERRY_PAGINATION_MAX_LIMIT`
+(default 100) per page.
 
 ### Translations
 

@@ -336,8 +336,8 @@ def test_sentence_id_matches_when_the_text_changed_upstream(directory):
 
 
 @pytest.mark.django_db
-def test_an_over_long_hand_edit_is_skipped_not_fatal(directory, settings, capsys):
-    settings.TRANSLATION_MAX_LENGTH = 5
+def test_an_over_long_hand_edit_is_skipped_not_fatal(directory, monkeypatch, capsys):
+    monkeypatch.setattr(Translation, 'TEXT_MAX_LENGTH', 5)
     make_exercises(2)
     write_fixture(directory, [{'sentence': sentence(0), 'en': 'Far too long'},
                               {'sentence': sentence(1), 'en': 'One'}])

@@ -24,8 +24,8 @@ urlpatterns = [
     path('healthz/', lambda request: HttpResponse('ok', content_type='text/plain')),
     # csrf_exempt: CSRF forges a request that rides on the victim's cookies,
     # and nothing here reads one. The only writes are the anonymous
-    # translation mutations, which identify their caller by a `clientId`
-    # argument and a hash of the address, so a forged cross-site request can
+    # translation mutations, which identify their caller by the `clientId` in
+    # their input and a hash of the address, so a forged cross-site request can
     # do nothing its author could not do by calling the API directly — and
     # Strawberry refuses mutations over GET regardless. This holds only while
     # no mutation reads the session or the logged-in user: the first one that

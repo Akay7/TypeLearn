@@ -63,7 +63,7 @@ test('rating marks the choice and sends it', async ({ page }) => {
 
   await expect(good).toHaveAttribute('aria-pressed', 'true')
   const rating = requests.find((r) => r.query.includes('mutation Rate'))
-  expect(rating.variables).toMatchObject({ id: 't0-en', value: 'UP' })
+  expect(rating.variables.data).toMatchObject({ translation: { set: 't0-en' }, value: 'UP' })
   // Rating is not typing.
   await expect(field(page)).toHaveValue('')
 })
@@ -83,8 +83,8 @@ test('a suggestion is sent, confirmed, and never typed into the answer', async (
 
   await expect(page.getByText('Thanks — it will appear after review.')).toBeVisible()
   const suggestion = requests.find((r) => r.query.includes('mutation Propose'))
-  expect(suggestion.variables).toMatchObject({
-    exerciseId: '0',
+  expect(suggestion.variables.data).toMatchObject({
+    exercise: { set: '0' },
     language: 'en',
     text: 'Hi there\nfriend',
   })

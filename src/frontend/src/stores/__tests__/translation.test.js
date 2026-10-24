@@ -65,7 +65,7 @@ function setup({ deck = ['1', '2', '3'], show = true, language = 'en' } = {}) {
   settings.showTranslation = show
   settings.interfaceLanguage = language
   const exercise = useExerciseStore()
-  exercise.deck = deck.map((id) => ({ id, sentence: 'สวัสดี', audioUrl: `/${id}.mp3` }))
+  exercise.deck = deck.map((id) => ({ id, sentence: 'สวัสดี', originalAudio: { url: `/${id}.mp3` } }))
   exercise.index = 0
   exercise.status = 'ready'
   return { settings, exercise, translation: useTranslationStore() }
@@ -168,7 +168,7 @@ describe('fetching translations', () => {
     const { exercise } = setup({ deck: ['1', '2'] })
     await settle()
 
-    exercise.deck = [...exercise.deck, { id: '9', sentence: 'ก', audioUrl: '/9.mp3' }]
+    exercise.deck = [...exercise.deck, { id: '9', sentence: 'ก', originalAudio: { url: '/9.mp3' } }]
     await settle()
 
     expect(requestsOf(fetch, 'query Translations').map((r) => r.variables.ids)).toEqual([
@@ -180,7 +180,7 @@ describe('fetching translations', () => {
 
 describe('rating', () => {
   function rated(value) {
-    return { data: { rateTranslation: translationOf(1, 'en', value) } }
+    return { data: { translation: { rateTranslation: translationOf(1, 'en', value) } } }
   }
 
   it('sends the rating and shows the counts the server returns', async () => {
@@ -195,8 +195,8 @@ describe('rating', () => {
     expect(await translation.rate('UP')).toBe(null)
 
     const [request] = requestsOf(fetch, 'mutation Rate')
-    expect(request.variables.value).toBe('UP')
-    expect(request.variables.clientId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(request.variables.data).toMatchObject({ translation: { set: 't1-en' }, value: 'UP' })
+    expect(request.variables.data.clientId).toMatch(/^[0-9a-f-]{36}$/)
     expect(translation.currentRating).toBe('UP')
     expect(translation.current.upVotes).toBe(1)
   })
@@ -213,7 +213,7 @@ describe('rating', () => {
     await translation.rate('DOWN')
     await translation.rate('DOWN')
 
-    expect(requestsOf(fetch, 'mutation Rate').map((r) => r.variables.value)).toEqual([
+    expect(requestsOf(fetch, 'mutation Rate').map((r) => r.variables.data.value)).toEqual([
       'DOWN',
       'NONE',
     ])
@@ -238,7 +238,13 @@ describe('rating', () => {
 
 describe('proposing', () => {
   it('sends a trimmed suggestion for the current exercise and language', async () => {
-    const fetch = backend({ onMutation: () => ({ data: { proposeTranslation: { accepted: true } } }) })
+    const fetch = backend({
+      onMutation: () => ({
+        data: {
+          translation: { proposeTranslation: translationOf(1, 'ru', { origin: 'LEARNER' }) },
+        },
+      }),
+    })
     vi.stubGlobal('fetch', fetch)
     const { translation } = setup({ language: 'ru' })
     await settle()
@@ -246,7 +252,12 @@ describe('proposing', () => {
     expect(await translation.propose('  Привет  ')).toBe(null)
 
     const [request] = requestsOf(fetch, 'mutation Propose')
-    expect(request.variables).toMatchObject({ exerciseId: '1', language: 'ru', text: 'Привет' })
+    expect(request.variables.data).toMatchObject({
+      exercise: { set: '1' },
+      language: 'ru',
+      text: 'Привет',
+    })
+    expect(request.variables.data.clientId).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it('refuses the obvious without a request', async () => {
